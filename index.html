@@ -342,9 +342,26 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
     <div class="tab-pane" id="tab-alumnos">
       <h2 class="section-title">Gestión de alumnos</h2>
 
-      <!-- Add student form -->
+      <!-- IMPORT EXCEL (bulk) -->
+      <div class="card" style="border-color:rgba(88,166,255,.3)">
+        <div class="card-title" style="color:var(--accent)">📥 Carga masiva desde Excel</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">
+          Sube la plantilla Excel con todos los alumnos de una vez. Hoja "Alumnos": columnas RUDE, Apellidos, Nombres, Curso, Paralelo.
+        </div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:10px;padding:20px;border:2px dashed var(--border);border-radius:var(--rs);cursor:pointer;transition:border .2s;font-size:.85rem;color:var(--muted)" id="drop-alumnos"
+               ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+               ondragleave="this.style.borderColor='var(--border)'"
+               ondrop="handleDropAlumnos(event)">
+          <span style="font-size:1.8rem">📂</span>
+          <span>Arrastra el archivo Excel aquí<br><span style="font-size:.75rem">o toca para seleccionar</span></span>
+          <input type="file" accept=".xlsx,.xls" style="display:none" id="input-xlsx-alumnos" onchange="importXlsxAlumnos(this.files[0])">
+        </label>
+        <div id="import-preview" style="display:none;margin-top:12px"></div>
+      </div>
+
+      <!-- Add student form (individual) -->
       <div class="card" id="form-alumno-card">
-        <div class="card-title">Nuevo alumno</div>
+        <div class="card-title">➕ Nuevo alumno (individual)</div>
         <div class="form-field">
           <label>Código RUDE</label>
           <input type="text" id="f-rude" placeholder="Ej: 12345678901" maxlength="20">
@@ -362,9 +379,7 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
         <div class="form-row">
           <div class="form-field">
             <label>Curso</label>
-            <select id="f-curso">
-              <option value="">—</option>
-            </select>
+            <select id="f-curso"><option value="">—</option></select>
           </div>
           <div class="form-field">
             <label>Paralelo</label>
@@ -377,16 +392,20 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
         <button class="btn btn-primary btn-full" onclick="guardarAlumno()">+ Guardar alumno</button>
       </div>
 
-      <!-- QR Generation -->
+      <!-- QR Generation + Print -->
       <div class="card">
-        <div class="card-title">Generar QR por curso</div>
+        <div class="card-title">🔳 Generar e imprimir QRs por curso</div>
         <select class="select-curso" id="sel-curso-qr" onchange="generarQRs()">
           <option value="">— Elige un curso —</option>
         </select>
+        <div id="qr-count-info" style="font-size:.8rem;color:var(--muted);margin-bottom:10px;display:none"></div>
         <div class="qr-grid" id="qr-grid">
           <div class="empty-state" style="grid-column:1/-1"><span class="icon">🔳</span>Selecciona un curso</div>
         </div>
-        <button class="btn btn-ghost btn-full mt12" onclick="window.print()">🖨 Imprimir QRs</button>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" style="flex:1" onclick="imprimirQRs()">🖨 Imprimir hoja de QRs</button>
+          <button class="btn btn-ghost btn-sm" onclick="generarQRs()">🔄 Actualizar</button>
+        </div>
       </div>
 
       <!-- Student list -->
@@ -395,6 +414,7 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
         <select class="select-curso" id="sel-curso-lista" onchange="renderAlumnosList()">
           <option value="">Todos los cursos</option>
         </select>
+        <div id="alumnos-count" style="font-size:.78rem;color:var(--muted);margin-bottom:8px"></div>
         <div id="alumnos-list"></div>
       </div>
     </div>
@@ -422,8 +442,22 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
     <!-- ── TAB: CONFIG ── -->
     <div class="tab-pane" id="tab-config">
       <h2 class="section-title">Configuración</h2>
+      <!-- IMPORT USUARIOS EXCEL -->
+      <div class="card" style="border-color:rgba(63,185,80,.3)">
+        <div class="card-title" style="color:var(--green)">📥 Carga masiva de usuarios/docentes</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">
+          Sube la plantilla Excel, hoja "Usuarios": columnas Usuario, Nombre, Contraseña, Rol.
+        </div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;border:2px dashed var(--border);border-radius:var(--rs);cursor:pointer;font-size:.82rem;color:var(--muted)" id="drop-usuarios">
+          <span style="font-size:1.5rem">📂</span>
+          <span>Arrastra Excel o toca para seleccionar</span>
+          <input type="file" accept=".xlsx,.xls" style="display:none" id="input-xlsx-usuarios" onchange="importXlsxUsuarios(this.files[0])">
+        </label>
+        <div id="import-usuarios-preview" style="display:none;margin-top:10px"></div>
+      </div>
+
       <div class="card" id="card-usuarios">
-        <div class="card-title">Usuarios del sistema</div>
+        <div class="card-title">Usuarios del sistema (individual)</div>
         <div class="form-field">
           <label>Usuario</label>
           <input type="text" id="cfg-user" placeholder="nombre.apellido" autocapitalize="none">
@@ -855,6 +889,8 @@ function renderAlumnosList(){
   const curso = document.getElementById('sel-curso-lista')?.value||'';
   const list = curso ? DB.alumnos.filter(a=>a.curso===curso) : DB.alumnos;
   const el = document.getElementById('alumnos-list');
+  const cnt = document.getElementById('alumnos-count');
+  if(cnt) cnt.textContent = `${list.length} alumno(s)`;
   if(!list.length){ el.innerHTML='<div class="empty-state"><span class="icon">👤</span>Sin alumnos aún</div>'; return; }
   el.innerHTML = list.map(a=>`
     <div class="list-item">
@@ -866,14 +902,17 @@ function renderAlumnosList(){
 }
 
 // ════════════════════════════════════════════════
-//  QR GENERATION
+//  QR GENERATION + PRINT
 // ════════════════════════════════════════════════
 function generarQRs(){
   const curso = document.getElementById('sel-curso-qr').value;
   const grid = document.getElementById('qr-grid');
-  if(!curso){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><span class="icon">🔳</span>Selecciona un curso</div>'; return; }
+  const info = document.getElementById('qr-count-info');
+  if(!curso){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><span class="icon">🔳</span>Selecciona un curso</div>'; info.style.display='none'; return; }
   const alumnos = DB.alumnos.filter(a=>a.curso===curso);
   if(!alumnos.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1">Sin alumnos en este curso</div>'; return; }
+  info.style.display='block';
+  info.textContent = `${alumnos.length} alumno(s) — se imprimirán ${Math.ceil(alumnos.length/6)} hoja(s) (6 QR por hoja)`;
   grid.innerHTML = alumnos.map(a=>`
     <div class="qr-card">
       <div class="qr-inner" id="qr-${a.rude}"></div>
@@ -884,9 +923,264 @@ function generarQRs(){
   setTimeout(()=>{
     alumnos.forEach(a=>{
       const el = document.getElementById('qr-'+a.rude);
-      if(el) new QRCode(el,{text:a.rude, width:130, height:130, correctLevel:QRCode.CorrectLevel.M});
+      if(el) new QRCode(el,{text:a.rude, width:140, height:140, correctLevel:QRCode.CorrectLevel.M});
     });
   },50);
+}
+
+function imprimirQRs(){
+  const curso = document.getElementById('sel-curso-qr').value;
+  if(!curso){ toast('Selecciona un curso primero','err'); return; }
+  const alumnos = DB.alumnos.filter(a=>a.curso===curso);
+  if(!alumnos.length){ toast('Sin alumnos en este curso','err'); return; }
+
+  // Build print window with 6-per-page layout
+  const win = window.open('','_blank','width=800,height=600');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>QRs — ${curso}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;background:#fff;color:#000}
+    h1{font-size:13px;text-align:center;padding:8px;border-bottom:1px solid #ccc;margin-bottom:4px}
+    .page{page-break-after:always}
+    .page:last-child{page-break-after:avoid}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:4px}
+    .qr-card{border:1px dashed #aaa;border-radius:6px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px;break-inside:avoid}
+    .qr-card img,.qr-card canvas{width:120px!important;height:120px!important}
+    .name{font-size:10.5px;font-weight:bold;line-height:1.3;max-width:130px}
+    .rude{font-size:8.5px;color:#555;font-family:monospace;letter-spacing:.03em}
+    .curso{font-size:8px;color:#777}
+    @media print{@page{size:A4 portrait;margin:8mm} body{-webkit-print-color-adjust:exact}}
+  </style></head><body>`);
+
+  // Split into pages of 6
+  for(let p=0; p<alumnos.length; p+=6){
+    const page = alumnos.slice(p, p+6);
+    win.document.write(`<div class="page">
+      <h1>Códigos QR — ${curso} &nbsp;|&nbsp; ${new Date().toLocaleDateString('es-BO')}</h1>
+      <div class="grid">`);
+    page.forEach(a=>{
+      win.document.write(`<div class="qr-card">
+        <div id="pqr-${a.rude}"></div>
+        <div class="name">${a.apellidos}<br>${a.nombres}</div>
+        <div class="rude">${a.rude}</div>
+        <div class="curso">${a.curso} "${a.paralelo}"</div>
+      </div>`);
+    });
+    win.document.write('</div></div>');
+  }
+
+  win.document.write(`<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <script>
+    const als = ${JSON.stringify(alumnos)};
+    als.forEach(a=>{
+      const el = document.getElementById('pqr-'+a.rude);
+      if(el) new QRCode(el,{text:a.rude,width:120,height:120,correctLevel:QRCode.CorrectLevel.M});
+    });
+    setTimeout(()=>window.print(),800);
+  <\/script></body></html>`);
+  win.document.close();
+}
+
+// ════════════════════════════════════════════════
+//  IMPORT EXCEL — ALUMNOS
+// ════════════════════════════════════════════════
+function handleDropAlumnos(e){
+  e.preventDefault();
+  document.getElementById('drop-alumnos').style.borderColor='var(--border)';
+  const f = e.dataTransfer.files[0];
+  if(f) importXlsxAlumnos(f);
+}
+
+function importXlsxAlumnos(file){
+  if(!file) return;
+  document.getElementById('drop-alumnos').querySelector('label,span')
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data,{type:'array'});
+      // Try sheet named "Alumnos" first, else first sheet
+      const shName = wb.SheetNames.includes('Alumnos') ? 'Alumnos' : wb.SheetNames[0];
+      const ws = wb.Sheets[shName];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      if(!rows.length){ toast('El archivo está vacío','err'); return; }
+
+      // Normalize column names (case insensitive)
+      const normalize = s => s.toString().toLowerCase().trim()
+        .replace(/[áä]/g,'a').replace(/[éë]/g,'e').replace(/[íï]/g,'i')
+        .replace(/[óö]/g,'o').replace(/[úü]/g,'u').replace(/ñ/g,'n');
+
+      const findCol = (row, keys) => {
+        const cols = Object.keys(row);
+        for(const k of keys){
+          const found = cols.find(c=>normalize(c)===k||normalize(c).includes(k));
+          if(found) return found;
+        }
+        return null;
+      };
+
+      const sample = rows[0];
+      const colRude     = findCol(sample, ['rude','codigo','code']);
+      const colApel     = findCol(sample, ['apellidos','apellido']);
+      const colNom      = findCol(sample, ['nombres','nombre']);
+      const colCurso    = findCol(sample, ['curso','grado','grade']);
+      const colParalelo = findCol(sample, ['paralelo','paralel','seccion','section']);
+
+      if(!colRude||!colApel||!colNom||!colCurso){
+        toast('No se encontraron columnas RUDE/Apellidos/Nombres/Curso','err'); return;
+      }
+
+      // Filter valid rows (skip examples and empty rows)
+      const valid = rows.filter(r=>{
+        const rude = r[colRude]?.toString().trim();
+        return rude && rude.length > 3 && r[colApel]?.toString().trim() && r[colNom]?.toString().trim();
+      });
+
+      if(!valid.length){ toast('No se encontraron datos válidos','err'); return; }
+
+      // Show preview
+      showImportPreviewAlumnos(valid, colRude, colApel, colNom, colCurso, colParalelo);
+    }catch(err){
+      toast('Error leyendo el archivo: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  // Reset input so same file can be re-selected
+  document.getElementById('input-xlsx-alumnos').value='';
+}
+
+function showImportPreviewAlumnos(rows, cR,cA,cN,cC,cP){
+  const el = document.getElementById('import-preview');
+  el.style.display='block';
+  const nuevos = rows.filter(r=>!DB.alumnos.find(a=>a.rude===r[cR]?.toString().trim()));
+  const dupes  = rows.length - nuevos.length;
+
+  el.innerHTML=`
+    <div style="background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);border-radius:var(--rs);padding:14px;margin-bottom:10px">
+      <div style="font-weight:600;margin-bottom:6px">Vista previa de importación</div>
+      <div style="font-size:.82rem;color:var(--muted)">
+        ✅ Nuevos: <strong style="color:var(--green)">${nuevos.length}</strong> &nbsp;
+        ⚠ Ya existen (se omitirán): <strong style="color:var(--amber)">${dupes}</strong> &nbsp;
+        📋 Total en archivo: <strong>${rows.length}</strong>
+      </div>
+    </div>
+    <div style="max-height:180px;overflow-y:auto;margin-bottom:10px;border:1px solid var(--border);border-radius:var(--rs)">
+      ${nuevos.slice(0,8).map(r=>`
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:.8rem">
+          <strong>${r[cA]}, ${r[cN]}</strong>
+          <span style="color:var(--muted);margin-left:8px">${r[cC]} ${r[cP]||''} · ${r[cR]}</span>
+        </div>`).join('')}
+      ${nuevos.length>8?`<div style="padding:8px 12px;font-size:.75rem;color:var(--muted)">…y ${nuevos.length-8} más</div>`:''}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-green" style="flex:1" onclick="confirmarImportAlumnos(${JSON.stringify(nuevos).replace(/"/g,'&quot;')},
+        '${cR}','${cA}','${cN}','${cC}','${cP||''}')">
+        ✅ Importar ${nuevos.length} alumnos
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-preview').style.display='none'">Cancelar</button>
+    </div>`;
+}
+
+function confirmarImportAlumnos(rows,cR,cA,cN,cC,cP){
+  let count=0;
+  rows.forEach(r=>{
+    const al={
+      rude:r[cR]?.toString().trim(),
+      apellidos:r[cA]?.toString().trim(),
+      nombres:r[cN]?.toString().trim(),
+      curso:r[cC]?.toString().trim(),
+      paralelo:(r[cP]||'A').toString().trim().toUpperCase()||'A'
+    };
+    if(!DB.alumnos.find(a=>a.rude===al.rude)){
+      DB.alumnos.push(al); count++;
+    }
+  });
+  saveLocal(DB_KEY,DB);
+  populateCursos();
+  renderAlumnosList();
+  document.getElementById('import-preview').style.display='none';
+  toast(`✅ ${count} alumnos importados`);
+  if(isOnline && API_URL){
+    rows.forEach(r=>{
+      apiCall('addAlumno',{rude:r[cR]?.toString().trim(),apellidos:r[cA]?.toString().trim(),
+        nombres:r[cN]?.toString().trim(),curso:r[cC]?.toString().trim(),
+        paralelo:(r[cP]||'A').toString().trim().toUpperCase()||'A'});
+    });
+  }
+}
+
+// ════════════════════════════════════════════════
+//  IMPORT EXCEL — USUARIOS
+// ════════════════════════════════════════════════
+function importXlsxUsuarios(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data,{type:'array'});
+      const shName = wb.SheetNames.includes('Usuarios') ? 'Usuarios' : wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[shName],{defval:''});
+      if(!rows.length){ toast('Archivo vacío','err'); return; }
+
+      const normalize = s=>s.toString().toLowerCase().trim()
+        .replace(/[áä]/g,'a').replace(/[éë]/g,'e').replace(/[íï]/g,'i')
+        .replace(/[óö]/g,'o').replace(/[úü]/g,'u').replace(/ñ/g,'n');
+      const findCol=(row,keys)=>{const cols=Object.keys(row);for(const k of keys){const f=cols.find(c=>normalize(c)===k||normalize(c).includes(k));if(f)return f;}return null;};
+
+      const s=rows[0];
+      const cU=findCol(s,['usuario','user','login','username']);
+      const cN=findCol(s,['nombre','name','completo']);
+      const cP=findCol(s,['contrasena','password','clave','pass']);
+      const cR=findCol(s,['rol','role','cargo','tipo']);
+
+      if(!cU||!cN||!cR){ toast('Columnas requeridas: Usuario, Nombre, Rol','err'); return; }
+
+      const validos=rows.filter(r=>r[cU]?.toString().trim()&&r[cN]?.toString().trim()&&r[cR]?.toString().trim());
+      const nuevos=validos.filter(r=>!DB.usuarios.find(u=>u.usuario===r[cU]?.toString().trim().toLowerCase()));
+
+      const prev=document.getElementById('import-usuarios-preview');
+      prev.style.display='block';
+      prev.innerHTML=`
+        <div style="background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);border-radius:var(--rs);padding:12px;margin-bottom:10px;font-size:.82rem">
+          ✅ Nuevos: <strong style="color:var(--green)">${nuevos.length}</strong> &nbsp;
+          ⚠ Ya existen: <strong style="color:var(--amber)">${validos.length-nuevos.length}</strong>
+        </div>
+        <div style="max-height:150px;overflow-y:auto;margin-bottom:10px;border:1px solid var(--border);border-radius:var(--rs)">
+          ${nuevos.slice(0,6).map(r=>`
+            <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:.8rem">
+              <strong>${r[cN]}</strong>
+              <span style="color:var(--muted);margin-left:6px">@${r[cU]} · ${r[cR]}</span>
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-green" style="flex:1" onclick="confirmarImportUsuarios(${JSON.stringify(nuevos).replace(/"/g,'&quot;')},'${cU}','${cN}','${cP||''}','${cR}')">
+            ✅ Importar ${nuevos.length} usuarios
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-usuarios-preview').style.display='none'">Cancelar</button>
+        </div>`;
+    }catch(err){ toast('Error: '+err.message,'err'); }
+  };
+  reader.readAsArrayBuffer(file);
+  document.getElementById('input-xlsx-usuarios').value='';
+}
+
+function confirmarImportUsuarios(rows,cU,cN,cP,cR){
+  let count=0;
+  rows.forEach(r=>{
+    const u={
+      usuario:r[cU]?.toString().trim().toLowerCase(),
+      nombre:r[cN]?.toString().trim(),
+      pass:r[cP]?.toString().trim()||'cambiar123',
+      rol:r[cR]?.toString().trim().toLowerCase()
+    };
+    if(!DB.usuarios.find(x=>x.usuario===u.usuario)){DB.usuarios.push(u);count++;}
+  });
+  saveLocal(DB_KEY,DB);
+  document.getElementById('import-usuarios-preview').style.display='none';
+  toast(`✅ ${count} usuarios importados`);
 }
 
 // ════════════════════════════════════════════════
@@ -1251,5 +1545,14 @@ doLogout = function(){
   localStorage.removeItem('session_user');
 };
 </script>
-</body>
-</html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Click-through for file input labels
+document.addEventListener('click', e=>{
+  if(e.target.id==='drop-alumnos'||e.target.closest('#drop-alumnos'))
+    document.getElementById('input-xlsx-alumnos').click();
+  if(e.target.id==='drop-usuarios'||e.target.closest('#drop-usuarios'))
+    document.getElementById('input-xlsx-usuarios').click();
+});
+</script>
+</body></html>
