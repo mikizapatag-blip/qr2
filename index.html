@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Asistencia">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Asistencia Escolar</title>
+<style>
+/* ═══════════════════════════════════════════════
+   VARIABLES & RESET
+═══════════════════════════════════════════════ */
+:root {
+  --bg:       #0d1117;
+  --surf:     #161b22;
+  --surf2:    #21262d;
+  --surf3:    #2d333b;
+  --accent:   #58a6ff;
+  --green:    #3fb950;
+  --amber:    #d29922;
+  --red:      #f85149;
+  --purple:   #bc8cff;
+  --text:     #e6edf3;
+  --muted:    #8b949e;
+  --border:   #30363d;
+  --r:        14px;
+  --rs:       8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:16px}
+
+/* ═══════════════════════════════════════════════
+   SCREENS
+═══════════════════════════════════════════════ */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen.active{display:flex}
+
+/* ═══════════════════════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════════════════════ */
+#screen-login{align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 0%,#1a2744 0%,var(--bg) 70%)}
+.login-box{width:100%;max-width:360px;animation:fadeUp .5s ease}
+.login-logo{text-align:center;margin-bottom:40px}
+.login-logo .mark{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-1px;color:var(--text)}
+.login-logo .mark span{color:var(--accent)}
+.login-logo .sub{font-size:.8rem;color:var(--muted);margin-top:4px;letter-spacing:.08em;text-transform:uppercase}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.field input{width:100%;padding:14px 16px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:1rem;outline:none;transition:border .2s}
+.field input:focus{border-color:var(--accent)}
+.btn-login{width:100%;padding:15px;background:var(--accent);color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;border:none;border-radius:var(--rs);cursor:pointer;margin-top:8px;transition:opacity .2s;letter-spacing:.02em}
+.btn-login:active{opacity:.85}
+.login-err{background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.4);border-radius:var(--rs);padding:12px 16px;font-size:.85rem;color:var(--red);margin-top:12px;display:none}
+.offline-badge{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:24px;font-size:.75rem;color:var(--muted)}
+.dot-offline{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 2s infinite}
+
+/* ═══════════════════════════════════════════════
+   APP SHELL (after login)
+═══════════════════════════════════════════════ */
+#screen-app{background:var(--bg)}
+.topbar{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surf);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;flex-shrink:0}
+.topbar-title{flex:1;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;letter-spacing:-.02em}
+.topbar-user{font-size:.75rem;color:var(--muted);text-align:right;line-height:1.4}
+.topbar-user strong{display:block;color:var(--text);font-size:.8rem}
+.role-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.role-director{background:rgba(188,140,255,.15);color:var(--purple)}
+.role-secretaria{background:rgba(88,166,255,.15);color:var(--accent)}
+.role-regente{background:rgba(210,153,34,.15);color:var(--amber)}
+.role-docente{background:rgba(63,185,80,.15);color:var(--green)}
+.btn-logout{padding:8px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-size:.75rem;cursor:pointer;white-space:nowrap}
+.btn-logout:active{background:var(--surf2)}
+
+/* BOTTOM NAV */
+.bottom-nav{display:flex;background:var(--surf);border-top:1px solid var(--border);flex-shrink:0;position:sticky;bottom:0}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 12px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-size:.65rem;font-family:'DM Sans',sans-serif;gap:4px;transition:color .2s}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item.active{color:var(--accent)}
+.nav-item.active svg{stroke:var(--accent)}
+
+/* CONTENT AREA */
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tab-pane{display:none;padding:16px}
+.tab-pane.active{display:block}
+
+/* ═══════════════════════════════════════════════
+   CARDS & LISTS
+═══════════════════════════════════════════════ */
+.card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.card-title{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:16px;letter-spacing:-.02em}
+
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat-box{background:var(--surf2);border:1px solid var(--border);border-radius:var(--rs);padding:14px 10px;text-align:center}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;line-height:1}
+.stat-lbl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+.s-green{color:var(--green)}.s-red{color:var(--red)}.s-blue{color:var(--accent)}
+
+.list-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--border);margin-bottom:8px;transition:border .2s}
+.list-item.present{border-color:rgba(63,185,80,.35);background:rgba(63,185,80,.05)}
+.list-item.absent{opacity:.7}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.present .status-dot{background:var(--green)}
+.absent .status-dot{background:var(--surf3)}
+.li-info{flex:1;min-width:0}
+.li-name{font-size:.9rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-sub{font-size:.72rem;color:var(--muted);margin-top:2px}
+.li-badge{font-size:.68rem;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap}
+.badge-p{background:rgba(63,185,80,.2);color:var(--green)}
+.badge-a{background:var(--surf3);color:var(--muted)}
+.badge-l{background:rgba(210,153,34,.2);color:var(--amber)}
+.li-time{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* ═══════════════════════════════════════════════
+   SCANNER
+═══════════════════════════════════════════════ */
+.scanner-wrap{position:relative;border-radius:var(--r);overflow:hidden;background:#000;aspect-ratio:4/3;width:100%}
+#scanner-video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.scan-box{width:65%;aspect-ratio:1;border:2px solid var(--accent);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.5);position:relative}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scanline 2s ease-in-out infinite}
+.scan-hint{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:.75rem;color:#fff;text-shadow:0 1px 3px #000}
+@keyframes scanline{0%{top:4%}50%{top:94%}100%{top:4%}}
+
+.cam-btns{display:flex;gap:8px;margin-top:10px}
+.btn{padding:12px 20px;border-radius:var(--rs);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.9rem;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn-full{width:100%}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:active{opacity:.85}
+.btn-ghost{background:var(--surf2);border:1px solid var(--border);color:var(--text)}
+.btn-ghost:active{background:var(--surf3)}
+.btn-green{background:var(--green);color:#000}
+.btn-red{background:var(--red);color:#fff}
+.btn-amber{background:var(--amber);color:#000}
+.btn-sm{padding:8px 14px;font-size:.8rem}
+
+/* FLASH ANIMATION */
+.flash-ok{animation:flashok .5s ease}
+.flash-err{animation:flasherr .5s ease}
+@keyframes flashok{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 4px rgba(63,185,80,.6)}}
+@keyframes flasherr{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 4px rgba(248,81,73,.6)}}
+
+/* SCAN RESULT POPUP */
+.scan-result{padding:14px 16px;border-radius:var(--rs);margin-bottom:12px;display:none;animation:fadeUp .3s ease}
+.scan-result.ok{background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.4)}
+.scan-result.warn{background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.4)}
+.scan-result.err{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.4)}
+.scan-result-name{font-weight:600;font-size:1rem}
+.scan-result-sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+
+/* OBSERVATION MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:flex-end}
+.modal-bg.open{display:flex}
+.modal{background:var(--surf);border-radius:var(--r) var(--r) 0 0;padding:20px 20px 32px;width:100%;max-height:80vh;overflow-y:auto;animation:slideUp .3s ease}
+.modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:4px}
+.modal-sub{font-size:.8rem;color:var(--muted);margin-bottom:16px}
+.obs-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.obs-chip{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surf2);color:var(--text);font-size:.8rem;cursor:pointer;transition:all .2s}
+.obs-chip:active,.obs-chip.sel{border-color:var(--accent);background:rgba(88,166,255,.15);color:var(--accent)}
+.obs-chip.fel{border-color:var(--green)}
+.obs-chip.fel.sel{border-color:var(--green);background:rgba(63,185,80,.15);color:var(--green)}
+.obs-textarea{width:100%;padding:12px;background:var(--surf2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;resize:none;outline:none;margin-bottom:12px;min-height:80px}
+.obs-textarea:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px}
+
+/* EXPORT / SYNC BANNER */
+.sync-banner{margin-bottom:12px;padding:14px 16px;border-radius:var(--rs);background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.4);display:flex;align-items:center;gap:10px;display:none}
+.sync-banner.show{display:flex}
+.sync-banner-text{flex:1;font-size:.82rem}
+.sync-banner-text strong{display:block;color:var(--amber)}
+
+/* ═══════════════════════════════════════════════
+   FORMS
+═══════════════════════════════════════════════ */
+.form-field{margin-bottom:14px}
+.form-field label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.form-field input,.form-field select{width:100%;padding:11px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none;transition:border .2s}
+.form-field input:focus,.form-field select:focus{border-color:var(--accent)}
+.form-field select option{background:var(--surf)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* QR GRID */
+.qr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.qr-card{background:var(--surf2);border:1px solid var(--border);border-radius:var(--rs);padding:14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+.qr-inner{background:#fff;border-radius:6px;padding:6px}
+.qr-rude{font-family:'Syne',sans-serif;font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.06em}
+.qr-name-label{font-size:.78rem;font-weight:600;line-height:1.3}
+
+/* REPORTS */
+.report-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.report-table th{padding:8px 10px;text-align:left;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+.report-table td{padding:9px 10px;border-bottom:1px solid rgba(48,54,61,.5)}
+.report-table tr:last-child td{border-bottom:none}
+
+/* CONNECTIVITY INDICATOR */
+.conn-indicator{position:fixed;top:0;left:0;right:0;padding:6px;text-align:center;font-size:.72rem;font-weight:600;z-index:999;transform:translateY(-100%);transition:transform .3s}
+.conn-indicator.offline{background:var(--amber);color:#000;transform:translateY(0)}
+.conn-indicator.back-online{background:var(--green);color:#000;transform:translateY(0)}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* UTILS */
+.hidden{display:none!important}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.separator{height:1px;background:var(--border);margin:16px 0}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:.9rem}
+.empty-state .icon{font-size:2.5rem;margin-bottom:12px;display:block}
+.select-curso{width:100%;padding:12px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:.95rem;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px}
+.select-curso:focus{border-color:var(--accent)}
+.pending-count{background:var(--red);color:#fff;border-radius:10px;font-size:.65rem;font-weight:700;padding:2px 6px;margin-left:4px}
+
+/* DARK SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- CONNECTIVITY BANNER -->
+<div class="conn-indicator" id="conn-indicator">Sin conexión — modo offline</div>
+
+<!-- ══════════════════════════════════════════
+  SCREEN: LOGIN
+══════════════════════════════════════════ -->
+<div class="screen active" id="screen-login">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="mark">asist<span>.</span>qr</div>
+      <div class="sub">Sistema de Asistencia Escolar</div>
+    </div>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="tu.usuario" autocomplete="username" autocapitalize="none">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()" id="btn-login-submit">Ingresar</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="offline-badge">
+      <div class="dot-offline" id="dot-conn"></div>
+      <span id="conn-label">Verificando conexión…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  SCREEN: APP
+══════════════════════════════════════════ -->
+<div class="screen" id="screen-app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">asist<span style="color:var(--accent)">.</span>qr</div>
+    <div class="topbar-user">
+      <strong id="topbar-name">—</strong>
+      <span id="topbar-role-pill"></span>
+    </div>
+    <button class="btn-logout btn-sm" onclick="doLogout()">Salir</button>
+  </div>
+
+  <!-- SYNC BANNER (offline pending) -->
+  <div class="sync-banner" id="sync-banner">
+    <span style="font-size:1.2rem">📤</span>
+    <div class="sync-banner-text">
+      <strong id="sync-count-text">Registros pendientes de subir</strong>
+      Conexión disponible — ¿sincronizar ahora?
+    </div>
+    <button class="btn btn-amber btn-sm" onclick="syncPending()">Subir</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ── TAB: INICIO (Dashboard) ── -->
+    <div class="tab-pane active" id="tab-inicio">
+      <div id="dash-content">
+        <div class="empty-state"><span class="icon">👋</span>Cargando…</div>
+      </div>
+    </div>
+
+    <!-- ── TAB: LISTA (Regente/Docente) ── -->
+    <div class="tab-pane" id="tab-lista">
+      <h2 class="section-title">Pasar lista</h2>
+
+      <div class="card">
+        <div class="card-title">Seleccionar curso</div>
+        <select class="select-curso" id="sel-curso" onchange="onCursoChange()">
+          <option value="">— Elige un curso —</option>
+        </select>
+        <select class="select-curso" id="sel-tipo-reg" style="display:none">
+          <option value="asistencia">Asistencia (Regente)</option>
+          <option value="observacion">Observación (Docente)</option>
+        </select>
+      </div>
+
+      <!-- Scanner -->
+      <div class="card" id="scanner-card" style="display:none">
+        <div class="card-title">Escanear QR</div>
+        <div id="scan-result-box" class="scan-result"></div>
+        <div class="scanner-wrap" id="scanner-wrap">
+          <video id="scanner-video" autoplay muted playsinline></video>
+          <div class="scan-overlay">
+            <div class="scan-box">
+              <div class="scan-line"></div>
+            </div>
+          </div>
+          <div class="scan-hint" id="scan-hint">Apunta al QR del estudiante</div>
+        </div>
+        <div class="cam-btns mt8">
+          <button class="btn btn-primary" style="flex:1" id="btn-cam-start" onclick="startCamera()">▶ Cámara</button>
+          <button class="btn btn-ghost" onclick="stopCamera()">⏹</button>
+        </div>
+      </div>
+
+      <!-- Attendance list -->
+      <div id="att-list-wrap" style="display:none">
+        <div class="stat-row">
+          <div class="stat-box"><div class="stat-val s-green" id="cnt-p">0</div><div class="stat-lbl">Presentes</div></div>
+          <div class="stat-box"><div class="stat-val s-red" id="cnt-a">0</div><div class="stat-lbl">Ausentes</div></div>
+          <div class="stat-box"><div class="stat-val s-blue" id="cnt-t">0</div><div class="stat-lbl">Total</div></div>
+        </div>
+        <div id="att-list"></div>
+        <div class="mt12" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-green btn-full" onclick="exportarDireccion()">📤 Exportar a Dirección</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetAtt()">Reiniciar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: ALUMNOS (Admin) ── -->
+    <div class="tab-pane" id="tab-alumnos">
+      <h2 class="section-title">Gestión de alumnos</h2>
+
+      <!-- Add student form -->
+      <div class="card" id="form-alumno-card">
+        <div class="card-title">Nuevo alumno</div>
+        <div class="form-field">
+          <label>Código RUDE</label>
+          <input type="text" id="f-rude" placeholder="Ej: 12345678901" maxlength="20">
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Apellidos</label>
+            <input type="text" id="f-apellidos" placeholder="García Mamani">
+          </div>
+          <div class="form-field">
+            <label>Nombres</label>
+            <input type="text" id="f-nombres" placeholder="Carlos">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Curso</label>
+            <select id="f-curso">
+              <option value="">—</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Paralelo</label>
+            <select id="f-paralelo">
+              <option value="A">A</option><option value="B">B</option>
+              <option value="C">C</option><option value="D">D</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="guardarAlumno()">+ Guardar alumno</button>
+      </div>
+
+      <!-- QR Generation -->
+      <div class="card">
+        <div class="card-title">Generar QR por curso</div>
+        <select class="select-curso" id="sel-curso-qr" onchange="generarQRs()">
+          <option value="">— Elige un curso —</option>
+        </select>
+        <div class="qr-grid" id="qr-grid">
+          <div class="empty-state" style="grid-column:1/-1"><span class="icon">🔳</span>Selecciona un curso</div>
+        </div>
+        <button class="btn btn-ghost btn-full mt12" onclick="window.print()">🖨 Imprimir QRs</button>
+      </div>
+
+      <!-- Student list -->
+      <div class="card">
+        <div class="card-title">Listado de alumnos</div>
+        <select class="select-curso" id="sel-curso-lista" onchange="renderAlumnosList()">
+          <option value="">Todos los cursos</option>
+        </select>
+        <div id="alumnos-list"></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: INFORMES ── -->
+    <div class="tab-pane" id="tab-informes">
+      <h2 class="section-title">Informes</h2>
+      <div class="card">
+        <div class="card-title">Filtros</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Fecha</label>
+            <input type="date" id="rep-fecha">
+          </div>
+          <div class="form-field">
+            <label>Curso</label>
+            <select id="rep-curso"><option value="">Todos</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="cargarInforme()">Ver informe</button>
+      </div>
+      <div id="informe-content"></div>
+    </div>
+
+    <!-- ── TAB: CONFIG ── -->
+    <div class="tab-pane" id="tab-config">
+      <h2 class="section-title">Configuración</h2>
+      <div class="card" id="card-usuarios">
+        <div class="card-title">Usuarios del sistema</div>
+        <div class="form-field">
+          <label>Usuario</label>
+          <input type="text" id="cfg-user" placeholder="nombre.apellido" autocapitalize="none">
+        </div>
+        <div class="form-field">
+          <label>Nombre completo</label>
+          <input type="text" id="cfg-nombre" placeholder="Prof. García">
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Contraseña</label>
+            <input type="password" id="cfg-pass" placeholder="••••••••">
+          </div>
+          <div class="form-field">
+            <label>Rol</label>
+            <select id="cfg-rol">
+              <option value="director">Director</option>
+              <option value="secretaria">Secretaría</option>
+              <option value="regente">Regente</option>
+              <option value="docente">Docente</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="guardarUsuario()">+ Crear usuario</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Cursos disponibles</div>
+        <div id="cursos-list" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="nuevo-curso" placeholder="Ej: 3ro de Secundaria" style="flex:1;padding:10px 12px;background:var(--surf2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;outline:none">
+          <button class="btn btn-primary btn-sm" onclick="agregarCurso()">+</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Conexión</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div id="cfg-dot" style="width:10px;height:10px;border-radius:50%;background:var(--muted)"></div>
+          <span id="cfg-conn-text" style="font-size:.85rem;color:var(--muted)">Verificando…</span>
+        </div>
+        <div class="form-field">
+          <label>URL del Apps Script</label>
+          <input type="url" id="cfg-api-url" placeholder="https://script.google.com/macros/s/…/exec">
+        </div>
+        <button class="btn btn-ghost btn-full btn-sm" onclick="guardarApiUrl()">Guardar URL</button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-item active" onclick="goTab('inicio',this)" data-tab="inicio">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Inicio
+    </button>
+    <button class="nav-item" onclick="goTab('lista',this)" data-tab="lista" id="nav-lista">
+      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Lista <span class="pending-count hidden" id="pending-badge">0</span>
+    </button>
+    <button class="nav-item hidden" onclick="goTab('alumnos',this)" data-tab="alumnos" id="nav-alumnos">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      Alumnos
+    </button>
+    <button class="nav-item hidden" onclick="goTab('informes',this)" data-tab="informes" id="nav-informes">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Informes
+    </button>
+    <button class="nav-item hidden" onclick="goTab('config',this)" data-tab="config" id="nav-config">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Config
+    </button>
+  </nav>
+
+</div><!-- /screen-app -->
+
+<!-- OBSERVATION MODAL -->
+<div class="modal-bg" id="modal-obs">
+  <div class="modal">
+    <div class="modal-title" id="modal-obs-name">Nombre alumno</div>
+    <div class="modal-sub" id="modal-obs-sub">RUDE • Curso</div>
+    <div class="card-title" style="margin-bottom:8px">Observación rápida</div>
+    <div class="obs-chips" id="obs-chips-neg">
+      <div class="obs-chip" data-val="No presentó tarea">📝 Sin tarea</div>
+      <div class="obs-chip" data-val="Sin uniforme">👔 Sin uniforme</div>
+      <div class="obs-chip" data-val="No participa en clases">🙈 No participa</div>
+      <div class="obs-chip" data-val="Llegó tarde">⏰ Llegó tarde</div>
+      <div class="obs-chip" data-val="Comportamiento inadecuado">⚠️ Comportamiento</div>
+      <div class="obs-chip" data-val="Sin materiales">📚 Sin materiales</div>
+    </div>
+    <div class="card-title" style="margin-bottom:8px">Felicitaciones</div>
+    <div class="obs-chips" id="obs-chips-pos">
+      <div class="obs-chip fel" data-val="Excelente participación">⭐ Participación</div>
+      <div class="obs-chip fel" data-val="Trabajo sobresaliente">🏆 Sobresaliente</div>
+      <div class="obs-chip fel" data-val="Gran mejora">📈 Gran mejora</div>
+    </div>
+    <textarea class="obs-textarea" id="obs-custom" placeholder="Observación adicional (opcional)…" rows="2"></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="guardarObservacion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+'use strict';
+// ════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════
+let API_URL = localStorage.getItem('api_url') || '';
+const DB_KEY = 'asistencia_db';
+const PENDING_KEY = 'pending_sync';
+
+// ════════════════════════════════════════════════
+//  LOCAL DATABASE (IndexedDB via wrapper)
+// ════════════════════════════════════════════════
+function saveLocal(key, data){ try{ localStorage.setItem(key, JSON.stringify(data)); }catch(e){} }
+function loadLocal(key, def=null){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch(e){ return def; } }
+
+// ════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════
+let SESSION = null;  // {usuario, nombre, rol}
+let DB = loadLocal(DB_KEY, {
+  usuarios: [
+    { usuario:'director', pass:'1234', nombre:'Director', rol:'director' }
+  ],
+  alumnos: [],
+  asistencias: [],  // {id, rude, nombre, curso, fecha, hora, docente, tipo:'asistencia'|'observacion', estado, obs}
+  cursos: ['1ro de Secundaria','2do de Secundaria','3ro de Secundaria',
+           '4to de Secundaria','5to de Secundaria','6to de Secundaria']
+});
+
+// attendance state for current session
+let attSession = {};  // rude -> {estado, hora}
+let attCurso = '';
+let scanStream = null;
+let scanRAF = null;
+let lastScan = '';
+let lastScanTime = 0;
+let pendingObs = null;  // alumno waiting for observation input
+
+// ════════════════════════════════════════════════
+//  CONNECTIVITY
+// ════════════════════════════════════════════════
+let isOnline = navigator.onLine;
+function updateConn(){
+  isOnline = navigator.onLine;
+  const dot = document.getElementById('dot-conn');
+  const lbl = document.getElementById('conn-label');
+  const cfgDot = document.getElementById('cfg-dot');
+  const cfgTxt = document.getElementById('cfg-conn-text');
+  const ind = document.getElementById('conn-indicator');
+  if(isOnline){
+    dot.style.background='var(--green)';
+    lbl.textContent='Conectado a internet';
+    cfgDot.style.background='var(--green)';
+    cfgTxt.textContent='Conectado';
+    ind.className='conn-indicator back-online';
+    ind.textContent='Conexión restaurada ✓';
+    setTimeout(()=>ind.classList.remove('back-online'),3000);
+    checkPending();
+  } else {
+    dot.style.background='var(--amber)';
+    lbl.textContent='Sin internet — modo offline';
+    cfgDot.style.background='var(--amber)';
+    cfgTxt.textContent='Sin conexión';
+    ind.className='conn-indicator offline';
+    ind.textContent='Sin conexión — modo offline activo';
+  }
+}
+window.addEventListener('online', updateConn);
+window.addEventListener('offline', updateConn);
+updateConn();
+
+function checkPending(){
+  const p = loadLocal(PENDING_KEY, []);
+  const banner = document.getElementById('sync-banner');
+  if(p.length > 0 && isOnline){
+    document.getElementById('sync-count-text').textContent = `${p.length} registro(s) pendiente(s) de subir`;
+    banner.classList.add('show');
+    const pb = document.getElementById('pending-badge');
+    pb.textContent = p.length; pb.classList.remove('hidden');
+  } else {
+    banner.classList.remove('show');
+    document.getElementById('pending-badge').classList.add('hidden');
+  }
+}
+
+// ════════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════════
+async function doLogin(){
+  const u = document.getElementById('login-user').value.trim().toLowerCase();
+  const p = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn = document.getElementById('btn-login-submit');
+  errEl.style.display='none';
+  btn.textContent='Verificando…'; btn.disabled=true;
+
+  // Try API first if online
+  let found = null;
+  if(isOnline && API_URL){
+    try{
+      const r = await fetch(`${API_URL}?action=login&usuario=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`);
+      const d = await r.json();
+      if(d.ok){ found = d.user; saveLocal('cached_users', DB.usuarios); }
+    }catch(e){}
+  }
+
+  // Fallback: local DB
+  if(!found){
+    found = DB.usuarios.find(x => x.usuario===u && x.pass===p);
+  }
+
+  btn.textContent='Ingresar'; btn.disabled=false;
+
+  if(!found){
+    errEl.textContent = isOnline ? 'Usuario o contraseña incorrectos.' : 'Sin conexión. Verifica tus datos locales.';
+    errEl.style.display='block'; return;
+  }
+
+  SESSION = found;
+  loginSuccess();
+}
+
+function loginSuccess(){
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+  document.getElementById('topbar-name').textContent = SESSION.nombre;
+  const pill = document.getElementById('topbar-role-pill');
+  const roles = {director:'role-director',secretaria:'role-secretaria',regente:'role-regente',docente:'role-docente'};
+  const labels = {director:'Director',secretaria:'Secretaría',regente:'Regente',docente:'Docente'};
+  pill.innerHTML = `<span class="role-pill ${roles[SESSION.rol]}">${labels[SESSION.rol]||SESSION.rol}</span>`;
+
+  // Show/hide nav by role
+  const isAdmin = ['director','secretaria'].includes(SESSION.rol);
+  const isDirector = SESSION.rol === 'director';
+  document.getElementById('nav-alumnos').classList.toggle('hidden', !isAdmin);
+  document.getElementById('nav-informes').classList.toggle('hidden', !isAdmin);
+  document.getElementById('nav-config').classList.toggle('hidden', !isDirector);
+
+  // Docente mode: show obs type selector
+  document.getElementById('sel-tipo-reg').style.display = SESSION.rol==='docente' ? 'block' : 'none';
+
+  populateCursos();
+  renderDash();
+  checkPending();
+  document.getElementById('rep-fecha').valueAsDate = new Date();
+}
+
+function doLogout(){
+  stopCamera();
+  SESSION = null;
+  document.getElementById('screen-app').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  document.getElementById('login-pass').value='';
+  goTab('inicio', document.querySelector('.nav-item'));
+}
+
+// ════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════
+function goTab(name, btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name==='lista') renderAttList();
+  if(name==='alumnos') renderAlumnosList();
+  if(name==='informes') cargarInforme();
+  if(name==='config') renderConfig();
+  if(name!=='lista') stopCamera();
+}
+
+// ════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════
+function renderDash(){
+  const el = document.getElementById('dash-content');
+  const today = todayStr();
+  const hoy = DB.asistencias.filter(a=>a.fecha===today && a.tipo==='asistencia');
+  const totalAlumnos = DB.alumnos.length;
+
+  if(SESSION.rol==='docente'){
+    const misObs = DB.asistencias.filter(a=>a.docente===SESSION.nombre && a.tipo==='observacion');
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Bienvenido</div>
+        <div style="font-size:1.1rem;font-weight:600;margin-bottom:8px">${SESSION.nombre}</div>
+        <div style="font-size:.85rem;color:var(--muted)">Usa la pestaña <strong style="color:var(--text)">Lista</strong> para registrar observaciones de tus alumnos.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tus observaciones hoy</div>
+        <div class="stat-val s-blue" style="font-size:2rem">${misObs.filter(a=>a.fecha===today).length}</div>
+      </div>`;
+    return;
+  }
+  if(SESSION.rol==='regente'){
+    const misCursos = [...new Set(DB.alumnos.map(a=>`${a.curso} - ${a.paralelo}`))];
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Hola, ${SESSION.nombre}</div>
+        <div style="font-size:.85rem;color:var(--muted)">Pasa lista desde la pestaña <strong style="color:var(--text)">Lista</strong>.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Lista hoy (${today})</div>
+        <div class="stat-row">
+          <div class="stat-box"><div class="stat-val s-green">${hoy.filter(a=>a.estado==='P').length}</div><div class="stat-lbl">Presentes</div></div>
+          <div class="stat-box"><div class="stat-val s-red">${hoy.filter(a=>a.estado==='A').length}</div><div class="stat-lbl">Ausentes</div></div>
+          <div class="stat-box"><div class="stat-val s-blue">${hoy.length}</div><div class="stat-lbl">Registros</div></div>
+        </div>
+      </div>`;
+    return;
+  }
+  // Director / Secretaría
+  const cursoCount = DB.cursos.length;
+  const pHoy = hoy.filter(a=>a.estado==='P').length;
+  const aHoy = hoy.filter(a=>a.estado==='A').length;
+  el.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-val s-blue">${totalAlumnos}</div><div class="stat-lbl">Alumnos</div></div>
+      <div class="stat-box"><div class="stat-val s-green">${pHoy}</div><div class="stat-lbl">Presentes hoy</div></div>
+      <div class="stat-box"><div class="stat-val s-red">${aHoy}</div><div class="stat-lbl">Ausentes hoy</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Resumen — ${today}</div>
+      ${DB.cursos.map(c=>{
+        const alsCurso = DB.alumnos.filter(a=>a.curso===c);
+        if(!alsCurso.length) return '';
+        const asHoy = hoy.filter(a=>alsCurso.some(al=>al.rude===a.rude));
+        const pct = alsCurso.length ? Math.round(asHoy.filter(x=>x.estado==='P').length/alsCurso.length*100) : 0;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:.85rem">${c}</div>
+          <div style="font-size:.75rem;color:var(--muted)">${asHoy.length}/${alsCurso.length}</div>
+          <div style="font-size:.8rem;font-weight:600;color:${pct>80?'var(--green)':pct>50?'var(--amber)':'var(--red)'}">${pct}%</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════
+//  COURSES
+// ════════════════════════════════════════════════
+function populateCursos(){
+  const selects = ['sel-curso','sel-curso-qr','sel-curso-lista','rep-curso','f-curso'];
+  selects.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const first = el.options[0];
+    el.innerHTML='';
+    el.appendChild(first||new Option('Todos los cursos',''));
+    DB.cursos.forEach(c=>{
+      // For sel-curso, add paralelos
+      if(id==='sel-curso'){
+        ['A','B','C','D'].forEach(p=>{
+          const exists = DB.alumnos.some(a=>a.curso===c && a.paralelo===p);
+          if(exists) el.appendChild(new Option(`${c} "${p}"`,`${c}|${p}`));
+        });
+      } else {
+        el.appendChild(new Option(c,c));
+      }
+    });
+  });
+}
+
+function agregarCurso(){
+  const v = document.getElementById('nuevo-curso').value.trim();
+  if(!v || DB.cursos.includes(v)) return;
+  DB.cursos.push(v);
+  saveLocal(DB_KEY, DB);
+  document.getElementById('nuevo-curso').value='';
+  populateCursos();
+  renderConfig();
+  apiCall('addCurso',{curso:v});
+}
+
+function renderConfig(){
+  // Cursos list
+  const el = document.getElementById('cursos-list');
+  el.innerHTML = DB.cursos.map(c=>`
+    <div class="list-item" style="margin-bottom:6px">
+      <div class="li-info"><div class="li-name">${c}</div></div>
+      <button class="btn btn-sm" style="background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;border-radius:6px;padding:4px 10px;font-size:.75rem"
+        onclick="eliminarCurso('${c}')">✕</button>
+    </div>`).join('');
+  document.getElementById('cfg-api-url').value = API_URL;
+}
+
+function eliminarCurso(c){
+  if(!confirm(`¿Eliminar curso "${c}"?`)) return;
+  DB.cursos = DB.cursos.filter(x=>x!==c);
+  saveLocal(DB_KEY, DB);
+  populateCursos(); renderConfig();
+}
+
+function guardarApiUrl(){
+  API_URL = document.getElementById('cfg-api-url').value.trim();
+  localStorage.setItem('api_url', API_URL);
+  toast('URL guardada ✓');
+}
+
+// ════════════════════════════════════════════════
+//  STUDENTS
+// ════════════════════════════════════════════════
+function guardarAlumno(){
+  const rude = document.getElementById('f-rude').value.trim();
+  const apellidos = document.getElementById('f-apellidos').value.trim();
+  const nombres = document.getElementById('f-nombres').value.trim();
+  const curso = document.getElementById('f-curso').value;
+  const paralelo = document.getElementById('f-paralelo').value;
+  if(!rude||!apellidos||!nombres||!curso){ toast('Completa todos los campos','err'); return; }
+  if(DB.alumnos.find(a=>a.rude===rude)){ toast('RUDE ya existe','err'); return; }
+  const al = {rude,apellidos,nombres,curso,paralelo};
+  DB.alumnos.push(al);
+  saveLocal(DB_KEY, DB);
+  populateCursos();
+  renderAlumnosList();
+  document.getElementById('f-rude').value='';
+  document.getElementById('f-apellidos').value='';
+  document.getElementById('f-nombres').value='';
+  toast('Alumno guardado ✓');
+  apiCall('addAlumno', al);
+}
+
+function renderAlumnosList(){
+  const curso = document.getElementById('sel-curso-lista')?.value||'';
+  const list = curso ? DB.alumnos.filter(a=>a.curso===curso) : DB.alumnos;
+  const el = document.getElementById('alumnos-list');
+  if(!list.length){ el.innerHTML='<div class="empty-state"><span class="icon">👤</span>Sin alumnos aún</div>'; return; }
+  el.innerHTML = list.map(a=>`
+    <div class="list-item">
+      <div class="li-info">
+        <div class="li-name">${a.apellidos}, ${a.nombres}</div>
+        <div class="li-sub">RUDE: ${a.rude} · ${a.curso} "${a.paralelo}"</div>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════
+//  QR GENERATION
+// ════════════════════════════════════════════════
+function generarQRs(){
+  const curso = document.getElementById('sel-curso-qr').value;
+  const grid = document.getElementById('qr-grid');
+  if(!curso){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><span class="icon">🔳</span>Selecciona un curso</div>'; return; }
+  const alumnos = DB.alumnos.filter(a=>a.curso===curso);
+  if(!alumnos.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1">Sin alumnos en este curso</div>'; return; }
+  grid.innerHTML = alumnos.map(a=>`
+    <div class="qr-card">
+      <div class="qr-inner" id="qr-${a.rude}"></div>
+      <div class="qr-name-label">${a.apellidos}<br>${a.nombres}</div>
+      <div class="qr-rude">${a.rude}</div>
+      <div style="font-size:.68rem;color:var(--muted)">${a.curso} "${a.paralelo}"</div>
+    </div>`).join('');
+  setTimeout(()=>{
+    alumnos.forEach(a=>{
+      const el = document.getElementById('qr-'+a.rude);
+      if(el) new QRCode(el,{text:a.rude, width:130, height:130, correctLevel:QRCode.CorrectLevel.M});
+    });
+  },50);
+}
+
+// ════════════════════════════════════════════════
+//  ATTENDANCE / SCANNER
+// ════════════════════════════════════════════════
+function onCursoChange(){
+  const val = document.getElementById('sel-curso').value;
+  const scannerCard = document.getElementById('scanner-card');
+  const attWrap = document.getElementById('att-list-wrap');
+  if(!val){ scannerCard.style.display='none'; attWrap.style.display='none'; return; }
+  attCurso = val;
+  attSession = {};
+  scannerCard.style.display='block';
+  attWrap.style.display='block';
+  renderAttList();
+}
+
+function renderAttList(){
+  if(!attCurso) return;
+  const [curso, paralelo] = attCurso.split('|');
+  const alumnos = DB.alumnos.filter(a=>a.curso===curso && a.paralelo===paralelo);
+  const el = document.getElementById('att-list');
+  let p=0, a=0;
+  if(!alumnos.length){ el.innerHTML='<div class="empty-state">Sin alumnos en este curso</div>'; return; }
+  el.innerHTML = alumnos.map(al=>{
+    const reg = attSession[al.rude];
+    const estado = reg ? reg.estado : 'A';
+    if(estado==='P') p++; else a++;
+    const cls = estado==='P'?'present':'absent';
+    const badge = estado==='P'?'<span class="li-badge badge-p">P</span>':
+                  estado==='L'?'<span class="li-badge badge-l">L</span>':
+                  '<span class="li-badge badge-a">A</span>';
+    return `<div class="list-item ${cls}" id="row-${al.rude}">
+      <div class="status-dot"></div>
+      <div class="li-info">
+        <div class="li-name">${al.apellidos}, ${al.nombres}</div>
+        <div class="li-sub">${al.rude}</div>
+      </div>
+      ${badge}
+      <div class="li-time">${reg?reg.hora:'—'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('cnt-p').textContent=p;
+  document.getElementById('cnt-a').textContent=a;
+  document.getElementById('cnt-t').textContent=alumnos.length;
+}
+
+async function startCamera(){
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}});
+    const v = document.getElementById('scanner-video');
+    v.srcObject = scanStream;
+    await v.play();
+    document.getElementById('scan-hint').textContent='Apunta al QR del estudiante';
+    scanLoop();
+  }catch(e){
+    toast('No se pudo acceder a la cámara. Revisa los permisos.','err');
+  }
+}
+
+function stopCamera(){
+  if(scanRAF){ cancelAnimationFrame(scanRAF); scanRAF=null; }
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
+  const v = document.getElementById('scanner-video');
+  if(v) v.srcObject=null;
+}
+
+function scanLoop(){
+  const v = document.getElementById('scanner-video');
+  if(!v||!scanStream) return;
+  if(v.readyState===v.HAVE_ENOUGH_DATA){
+    const c=document.createElement('canvas');
+    c.width=v.videoWidth; c.height=v.videoHeight;
+    c.getContext('2d').drawImage(v,0,0);
+    const img=c.getContext('2d').getImageData(0,0,c.width,c.height);
+    const code=jsQR(img.data,img.width,img.height);
+    if(code && code.data!==lastScan || (Date.now()-lastScanTime>2500)){
+      if(code){ lastScan=code.data; lastScanTime=Date.now(); processQR(code.data); }
+    }
+  }
+  scanRAF=requestAnimationFrame(scanLoop);
+}
+
+function processQR(rude){
+  const alumno = DB.alumnos.find(a=>a.rude===rude);
+  const rb = document.getElementById('scan-result-box');
+  const wrap = document.getElementById('scanner-wrap');
+
+  if(!alumno){
+    rb.className='scan-result err'; rb.style.display='block';
+    rb.innerHTML=`<div class="scan-result-name">QR no reconocido</div><div class="scan-result-sub">${rude}</div>`;
+    wrap.classList.add('flash-err'); setTimeout(()=>wrap.classList.remove('flash-err'),500);
+    return;
+  }
+
+  const tipo = SESSION.rol==='docente' ? document.getElementById('sel-tipo-reg').value : 'asistencia';
+
+  if(tipo==='observacion'){
+    // Open observation modal
+    stopCamera();
+    pendingObs = alumno;
+    document.getElementById('modal-obs-name').textContent=`${alumno.apellidos}, ${alumno.nombres}`;
+    document.getElementById('modal-obs-sub').textContent=`RUDE: ${alumno.rude} · ${alumno.curso} "${alumno.paralelo}"`;
+    document.querySelectorAll('.obs-chip').forEach(c=>c.classList.remove('sel'));
+    document.getElementById('obs-custom').value='';
+    document.getElementById('modal-obs').classList.add('open');
+    return;
+  }
+
+  // ASISTENCIA
+  if(attSession[rude]){
+    rb.className='scan-result warn'; rb.style.display='block';
+    rb.innerHTML=`<div class="scan-result-name">${alumno.apellidos}, ${alumno.nombres}</div>
+      <div class="scan-result-sub">Ya registrado — ${attSession[rude].hora}</div>`;
+    document.getElementById('scan-hint').textContent=`Ya registrado: ${alumno.apellidos}`;
+    return;
+  }
+
+  const hora = new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'});
+  attSession[rude] = {estado:'P', hora};
+  rb.className='scan-result ok'; rb.style.display='block';
+  rb.innerHTML=`<div class="scan-result-name">✓ ${alumno.apellidos}, ${alumno.nombres}</div>
+    <div class="scan-result-sub">${alumno.curso} "${alumno.paralelo}" · ${hora}</div>`;
+  wrap.classList.add('flash-ok'); setTimeout(()=>wrap.classList.remove('flash-ok'),500);
+  document.getElementById('scan-hint').textContent=`✓ ${alumno.apellidos}`;
+  renderAttList();
+}
+
+function resetAtt(){ if(confirm('¿Reiniciar asistencia?')){ attSession={}; renderAttList(); } }
+
+// ════════════════════════════════════════════════
+//  OBSERVATION MODAL
+// ════════════════════════════════════════════════
+document.querySelectorAll('.obs-chip').forEach(chip=>{
+  chip.addEventListener('click',()=>chip.classList.toggle('sel'));
+});
+
+function closeModal(){
+  document.getElementById('modal-obs').classList.remove('open');
+  pendingObs=null;
+  startCamera();
+}
+
+function guardarObservacion(){
+  if(!pendingObs) return;
+  const selChips = [...document.querySelectorAll('.obs-chip.sel')].map(c=>c.dataset.val);
+  const custom = document.getElementById('obs-custom').value.trim();
+  const obs = [...selChips, custom].filter(Boolean).join(' | ');
+  if(!obs){ toast('Selecciona al menos una observación','err'); return; }
+
+  const reg = {
+    id: Date.now().toString(),
+    rude: pendingObs.rude,
+    nombre: `${pendingObs.apellidos}, ${pendingObs.nombres}`,
+    curso: pendingObs.curso, paralelo: pendingObs.paralelo,
+    fecha: todayStr(),
+    hora: new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'}),
+    docente: SESSION.nombre,
+    tipo: 'observacion',
+    obs
+  };
+
+  DB.asistencias.push(reg);
+  saveLocal(DB_KEY, DB);
+  addPending(reg);
+  closeModal();
+  toast('Observación guardada ✓');
+}
+
+// ════════════════════════════════════════════════
+//  EXPORT / SYNC
+// ════════════════════════════════════════════════
+function exportarDireccion(){
+  if(!attCurso){ toast('Selecciona un curso','err'); return; }
+  const [curso, paralelo] = attCurso.split('|');
+  const alumnos = DB.alumnos.filter(a=>a.curso===curso && a.paralelo===paralelo);
+  const fecha = todayStr();
+  const hora_exp = new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'});
+
+  const registros = alumnos.map(al=>{
+    const reg = attSession[al.rude] || {estado:'A', hora:'—'};
+    return {
+      id: `${fecha}-${al.rude}`,
+      rude: al.rude,
+      nombre: `${al.apellidos}, ${al.nombres}`,
+      curso, paralelo, fecha,
+      hora: reg.hora,
+      docente: SESSION.nombre,
+      tipo: 'asistencia',
+      estado: reg.estado,
+      obs: ''
+    };
+  });
+
+  // Save to DB
+  registros.forEach(r=>{
+    const exists = DB.asistencias.findIndex(a=>a.id===r.id);
+    if(exists>=0) DB.asistencias[exists]=r; else DB.asistencias.push(r);
+  });
+  saveLocal(DB_KEY, DB);
+
+  if(isOnline && API_URL){
+    apiCall('batchAsistencia',{registros}).then(()=>toast('✓ Enviado a Dirección'));
+  } else {
+    registros.forEach(r=>addPending(r));
+    toast(`✓ Guardado offline (${registros.length} registros)`,'warn');
+    checkPending();
+  }
+}
+
+function addPending(reg){
+  const p = loadLocal(PENDING_KEY, []);
+  p.push(reg);
+  saveLocal(PENDING_KEY, p);
+  checkPending();
+}
+
+async function syncPending(){
+  const p = loadLocal(PENDING_KEY, []);
+  if(!p.length || !API_URL){ toast('Nada que sincronizar'); return; }
+  toast(`Subiendo ${p.length} registros…`);
+  try{
+    await apiCall('batchAsistencia',{registros:p});
+    saveLocal(PENDING_KEY, []);
+    checkPending();
+    toast(`✓ ${p.length} registros sincronizados`);
+  }catch(e){
+    toast('Error al sincronizar','err');
+  }
+}
+
+// ════════════════════════════════════════════════
+//  REPORTS
+// ════════════════════════════════════════════════
+function cargarInforme(){
+  const fecha = document.getElementById('rep-fecha').value;
+  const curso = document.getElementById('rep-curso').value;
+  const el = document.getElementById('informe-content');
+
+  let data = DB.asistencias.filter(a=>a.tipo==='asistencia');
+  if(fecha) data = data.filter(a=>a.fecha===fecha);
+  if(curso) data = data.filter(a=>a.curso===curso);
+
+  if(!data.length){ el.innerHTML='<div class="empty-state"><span class="icon">📋</span>Sin datos para este filtro</div>'; return; }
+
+  const byCurso = {};
+  data.forEach(r=>{ const k=`${r.curso} "${r.paralelo||''}"`.trim(); if(!byCurso[k]) byCurso[k]=[]; byCurso[k].push(r); });
+
+  el.innerHTML = Object.entries(byCurso).map(([k,regs])=>{
+    const p=regs.filter(r=>r.estado==='P').length;
+    const pct=regs.length?Math.round(p/regs.length*100):0;
+    return `<div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title" style="margin:0">${k}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:${pct>80?'var(--green)':pct>50?'var(--amber)':'var(--red)'}">${pct}%</div>
+      </div>
+      <table class="report-table">
+        <thead><tr><th>Apellidos, Nombres</th><th>RUDE</th><th>Estado</th><th>Hora</th></tr></thead>
+        <tbody>${regs.map(r=>`<tr>
+          <td>${r.nombre}</td>
+          <td style="font-size:.72rem;color:var(--muted)">${r.rude}</td>
+          <td><span class="li-badge ${r.estado==='P'?'badge-p':'badge-a'}">${r.estado==='P'?'PRES':'AUS'}</span></td>
+          <td style="color:var(--muted)">${r.hora}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+//  USERS (Config)
+// ════════════════════════════════════════════════
+function guardarUsuario(){
+  const u={
+    usuario: document.getElementById('cfg-user').value.trim().toLowerCase(),
+    nombre: document.getElementById('cfg-nombre').value.trim(),
+    pass: document.getElementById('cfg-pass').value,
+    rol: document.getElementById('cfg-rol').value
+  };
+  if(!u.usuario||!u.nombre||!u.pass){ toast('Completa todos los campos','err'); return; }
+  if(DB.usuarios.find(x=>x.usuario===u.usuario)){ toast('Usuario ya existe','err'); return; }
+  DB.usuarios.push(u);
+  saveLocal(DB_KEY, DB);
+  toast(`Usuario ${u.nombre} creado ✓`);
+  apiCall('addUsuario', u);
+  document.getElementById('cfg-user').value='';
+  document.getElementById('cfg-nombre').value='';
+  document.getElementById('cfg-pass').value='';
+}
+
+// ════════════════════════════════════════════════
+//  API CALLS
+// ════════════════════════════════════════════════
+async function apiCall(action, data={}){
+  if(!API_URL) return null;
+  try{
+    const r = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action, ...data, token: SESSION?.usuario})
+    });
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+// ════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
+
+let toastTimer;
+function toast(msg, type='ok'){
+  let el = document.getElementById('toast-el');
+  if(!el){
+    el=document.createElement('div');
+    el.id='toast-el';
+    el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:20px;font-size:.85rem;font-weight:600;z-index:500;transition:opacity .3s;max-width:90vw;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    document.body.appendChild(el);
+  }
+  const colors={ok:'background:var(--green);color:#000',warn:'background:var(--amber);color:#000',err:'background:var(--red);color:#fff'};
+  el.style.cssText+=';'+colors[type]||colors.ok;
+  el.textContent=msg; el.style.opacity='1';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.style.opacity='0',3000);
+}
+
+// ════════════════════════════════════════════════
+//  PWA SERVICE WORKER
+// ════════════════════════════════════════════════
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{
+  updateConn();
+  // Load API URL from storage
+  if(localStorage.getItem('api_url')) API_URL = localStorage.getItem('api_url');
+  // Try auto-login from session
+  const saved = loadLocal('session_user');
+  if(saved){
+    const u = DB.usuarios.find(x=>x.usuario===saved);
+    if(u){ SESSION=u; loginSuccess(); }
+  }
+});
+
+// Save session on login
+const _loginSuccess = loginSuccess;
+loginSuccess = function(){
+  _loginSuccess();
+  saveLocal('session_user', SESSION.usuario);
+};
+
+// Clear session on logout
+const _doLogout = doLogout;
+doLogout = function(){
+  _doLogout();
+  localStorage.removeItem('session_user');
+};
+</script>
+</body>
+</html>
