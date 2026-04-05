@@ -816,20 +816,24 @@ function renderDash(){
 //  COURSES
 // ════════════════════════════════════════════════
 function populateCursos(){
-  // DEBUG: verificar qué hay en DB
-  const muestra = DB.alumnos.slice(0,3);
-  if(muestra.length) console.log('DEBUG alumnos muestra:', JSON.stringify(muestra));
+  const ord = {'1ro':1,'2do':2,'3ro':3,'4to':4,'5to':5,'6to':6};
 
-  // Siempre construir desde los alumnos reales — única fuente de verdad
-  const cursosDeAlumnos = [...new Set(DB.alumnos.map(a=>a.curso).filter(Boolean))].sort((a,b)=>{
-    // Ordenar: 1ro, 2do, 3ro, 4to, 5to, 6to
-    const ord = {'1ro':1,'2do':2,'3ro':3,'4to':4,'5to':5,'6to':6};
-    const ka = ord[a.slice(0,3)]||99, kb = ord[b.slice(0,3)]||99;
-    return ka - kb || a.localeCompare(b);
+  // Combos únicos curso+paralelo ordenados
+  const combos = [];
+  const seen = new Set();
+  [...DB.alumnos].sort((a,b)=>{
+    const ka=ord[a.curso?.slice(0,3)]||99, kb=ord[b.curso?.slice(0,3)]||99;
+    if(ka!==kb) return ka-kb;
+    return (a.paralelo||'').localeCompare(b.paralelo||'');
+  }).forEach(a=>{
+    if(!a.curso) return;
+    const key=`${a.curso}|${a.paralelo||''}`;
+    if(!seen.has(key)){ seen.add(key); combos.push({curso:a.curso,paralelo:a.paralelo||''}); }
   });
 
-  // Sincronizar al DB.cursos
-  cursosDeAlumnos.forEach(c=>{ if(!DB.cursos.includes(c)) DB.cursos.push(c); });
+  // Niveles únicos para filtros simples
+  const cursos = [...new Set(combos.map(c=>c.curso))];
+  cursos.forEach(c=>{ if(!DB.cursos.includes(c)) DB.cursos.push(c); });
 
   const selects = ['sel-curso','sel-curso-qr','sel-curso-lista','rep-curso','f-curso'];
   selects.forEach(id=>{
@@ -837,19 +841,19 @@ function populateCursos(){
     if(!el) return;
     const first = el.options[0];
     el.innerHTML='';
-    el.appendChild(first || new Option('Todos los cursos',''));
-    cursosDeAlumnos.forEach(c=>{
-      if(id==='sel-curso'){
-        // Paralelos reales que existen en los alumnos, ordenados A-F
-        const paralelos = [...new Set(DB.alumnos.filter(a=>a.curso===c).map(a=>a.paralelo))]
-          .filter(Boolean).sort();
-        paralelos.forEach(p=>{
-          el.appendChild(new Option(`${c} "${p}"`, `${c}|${p}`));
-        });
-      } else {
-        el.appendChild(new Option(c, c));
-      }
-    });
+    el.appendChild(first || new Option('— Elige un curso —',''));
+
+    if(['sel-curso','sel-curso-qr','sel-curso-lista'].includes(id)){
+      // Mostrar "1ro Secundaria "A"" con valor "1ro Secundaria|A"
+      combos.forEach(({curso,paralelo})=>{
+        const label = paralelo ? `${curso} "${paralelo}"` : curso;
+        const val   = paralelo ? `${curso}|${paralelo}` : curso;
+        el.appendChild(new Option(label, val));
+      });
+    } else {
+      // rep-curso, f-curso: solo nivel sin paralelo
+      cursos.forEach(c=> el.appendChild(new Option(c,c)));
+    }
   });
 }
 
