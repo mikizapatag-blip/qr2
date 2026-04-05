@@ -850,8 +850,16 @@ function populateCursos(){
         const val   = paralelo ? `${curso}|${paralelo}` : curso;
         el.appendChild(new Option(label, val));
       });
+    } else if(id==='rep-curso'){
+      // Informes: también con paralelo para filtrar por curso exacto
+      el.options[0].text = 'Todos';
+      combos.forEach(({curso,paralelo})=>{
+        const label = paralelo ? `${curso} "${paralelo}"` : curso;
+        const val   = paralelo ? `${curso}|${paralelo}` : curso;
+        el.appendChild(new Option(label, val));
+      });
     } else {
-      // rep-curso, f-curso: solo nivel sin paralelo
+      // f-curso (formulario nuevo alumno): solo nivel
       cursos.forEach(c=> el.appendChild(new Option(c,c)));
     }
   });
@@ -929,12 +937,20 @@ function limpiarAlumnosEjemplo(){
 }
 
 function renderAlumnosList(){
-  const curso = document.getElementById('sel-curso-lista')?.value||'';
-  const list = curso ? DB.alumnos.filter(a=>a.curso===curso) : DB.alumnos;
+  const val = document.getElementById('sel-curso-lista')?.value||'';
+  let list;
+  if(!val){
+    list = DB.alumnos;
+  } else if(val.includes('|')){
+    const [curso,paralelo] = val.split('|');
+    list = DB.alumnos.filter(a=>a.curso===curso && a.paralelo===paralelo);
+  } else {
+    list = DB.alumnos.filter(a=>a.curso===val);
+  }
   const el = document.getElementById('alumnos-list');
   const cnt = document.getElementById('alumnos-count');
   if(cnt) cnt.textContent = `${list.length} alumno(s)`;
-  if(!list.length){ el.innerHTML='<div class="empty-state"><span class="icon">👤</span>Sin alumnos aún</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty-state"><span class="icon">👤</span>Sin alumnos</div>'; return; }
   el.innerHTML = list.map(a=>`
     <div class="list-item">
       <div class="li-info">
@@ -948,14 +964,17 @@ function renderAlumnosList(){
 //  QR GENERATION + PRINT
 // ════════════════════════════════════════════════
 function generarQRs(){
-  const curso = document.getElementById('sel-curso-qr').value;
+  const val = document.getElementById('sel-curso-qr').value;
   const grid = document.getElementById('qr-grid');
   const info = document.getElementById('qr-count-info');
-  if(!curso){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><span class="icon">🔳</span>Selecciona un curso</div>'; info.style.display='none'; return; }
-  const alumnos = DB.alumnos.filter(a=>a.curso===curso);
+  if(!val){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><span class="icon">🔳</span>Selecciona un curso</div>'; info.style.display='none'; return; }
+  const [curso, paralelo] = val.includes('|') ? val.split('|') : [val,''];
+  const alumnos = paralelo
+    ? DB.alumnos.filter(a=>a.curso===curso && a.paralelo===paralelo)
+    : DB.alumnos.filter(a=>a.curso===curso);
   if(!alumnos.length){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1">Sin alumnos en este curso</div>'; return; }
   info.style.display='block';
-  info.textContent = `${alumnos.length} alumno(s) — se imprimirán ${Math.ceil(alumnos.length/6)} hoja(s) (6 QR por hoja)`;
+  info.textContent = `${alumnos.length} alumno(s) — ${Math.ceil(alumnos.length/6)} hoja(s) de impresión`;
   grid.innerHTML = alumnos.map(a=>`
     <div class="qr-card">
       <div class="qr-inner" id="qr-${a.rude}"></div>
@@ -972,15 +991,18 @@ function generarQRs(){
 }
 
 function imprimirQRs(){
-  const curso = document.getElementById('sel-curso-qr').value;
-  if(!curso){ toast('Selecciona un curso primero','err'); return; }
-  const alumnos = DB.alumnos.filter(a=>a.curso===curso);
+  const val = document.getElementById('sel-curso-qr').value;
+  if(!val){ toast('Selecciona un curso primero','err'); return; }
+  const [curso, paralelo] = val.includes('|') ? val.split('|') : [val,''];
+  const alumnos = paralelo
+    ? DB.alumnos.filter(a=>a.curso===curso && a.paralelo===paralelo)
+    : DB.alumnos.filter(a=>a.curso===curso);
   if(!alumnos.length){ toast('Sin alumnos en este curso','err'); return; }
+  const titulo = paralelo ? `${curso} "${paralelo}"` : curso;
 
-  // Build print window with 6-per-page layout
   const win = window.open('','_blank','width=800,height=600');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>QRs — ${curso}</title>
+  <title>QRs — ${titulo}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#fff;color:#000}
@@ -1000,7 +1022,7 @@ function imprimirQRs(){
   for(let p=0; p<alumnos.length; p+=6){
     const page = alumnos.slice(p, p+6);
     win.document.write(`<div class="page">
-      <h1>Códigos QR — ${curso} &nbsp;|&nbsp; ${new Date().toLocaleDateString('es-BO')}</h1>
+      <h1>Códigos QR — ${titulo} &nbsp;|&nbsp; ${new Date().toLocaleDateString('es-BO')}</h1>
       <div class="grid">`);
     page.forEach(a=>{
       win.document.write(`<div class="qr-card">
@@ -1488,12 +1510,19 @@ async function syncPending(){
 // ════════════════════════════════════════════════
 function cargarInforme(){
   const fecha = document.getElementById('rep-fecha').value;
-  const curso = document.getElementById('rep-curso').value;
-  const el = document.getElementById('informe-content');
+  const val   = document.getElementById('rep-curso').value;
+  const el    = document.getElementById('informe-content');
 
   let data = DB.asistencias.filter(a=>a.tipo==='asistencia');
   if(fecha) data = data.filter(a=>a.fecha===fecha);
-  if(curso) data = data.filter(a=>a.curso===curso);
+  if(val){
+    if(val.includes('|')){
+      const [curso,paralelo] = val.split('|');
+      data = data.filter(a=>a.curso===curso && (a.paralelo||'')===(paralelo||''));
+    } else {
+      data = data.filter(a=>a.curso===val);
+    }
+  }
 
   if(!data.length){ el.innerHTML='<div class="empty-state"><span class="icon">📋</span>Sin datos para este filtro</div>'; return; }
 
