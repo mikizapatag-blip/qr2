@@ -1009,12 +1009,12 @@ function imprimirQRs(){
     h1{font-size:13px;text-align:center;padding:8px;border-bottom:1px solid #ccc;margin-bottom:4px}
     .page{page-break-after:always}
     .page:last-child{page-break-after:avoid}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:4px}
-    .qr-card{border:1px dashed #aaa;border-radius:6px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px;break-inside:avoid}
-    .qr-card img,.qr-card canvas{width:120px!important;height:120px!important}
-    .name{font-size:10.5px;font-weight:bold;line-height:1.3;max-width:130px}
-    .rude{font-size:8.5px;color:#555;font-family:monospace;letter-spacing:.03em}
-    .curso{font-size:8px;color:#777}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0;padding:8px}
+    .qr-card{border:1px dashed #aaa;border-radius:8px;padding:16px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px;break-inside:avoid}
+    .qr-card img,.qr-card canvas{width:180px!important;height:180px!important}
+    .name{font-size:12px;font-weight:bold;line-height:1.3;max-width:180px}
+    .rude{font-size:9.5px;color:#555;font-family:monospace;letter-spacing:.03em}
+    .curso{font-size:9px;color:#777}
     @media print{@page{size:A4 portrait;margin:8mm} body{-webkit-print-color-adjust:exact}}
   </style></head><body>`);
 
@@ -1040,7 +1040,7 @@ function imprimirQRs(){
     const als = ${JSON.stringify(alumnos)};
     als.forEach(a=>{
       const el = document.getElementById('pqr-'+a.rude);
-      if(el) new QRCode(el,{text:a.rude,width:120,height:120,correctLevel:QRCode.CorrectLevel.M});
+      if(el) new QRCode(el,{text:a.rude,width:180,height:180,correctLevel:QRCode.CorrectLevel.M});
     });
     setTimeout(()=>window.print(),800);
   <\/script></body></html>`);
@@ -1234,6 +1234,14 @@ function importXlsxUsuarios(file){
       const validos=rows.filter(r=>r[cU]?.toString().trim()&&r[cN]?.toString().trim()&&r[cR]?.toString().trim());
       const nuevos=validos.filter(r=>!DB.usuarios.find(u=>u.usuario===r[cU]?.toString().trim().toLowerCase()));
 
+      // Construir objetos finales con contraseña ya resuelta (evita problemas con nombre de columna en onclick)
+      const usuariosParaImportar = nuevos.map(r=>({
+        usuario: r[cU]?.toString().trim().toLowerCase(),
+        nombre:  r[cN]?.toString().trim(),
+        pass:    cP && r[cP] ? r[cP].toString().trim() : 'cambiar123',
+        rol:     r[cR]?.toString().trim().toLowerCase()
+      }));
+
       const prev=document.getElementById('import-usuarios-preview');
       prev.style.display='block';
       prev.innerHTML=`
@@ -1242,15 +1250,15 @@ function importXlsxUsuarios(file){
           ⚠ Ya existen: <strong style="color:var(--amber)">${validos.length-nuevos.length}</strong>
         </div>
         <div style="max-height:150px;overflow-y:auto;margin-bottom:10px;border:1px solid var(--border);border-radius:var(--rs)">
-          ${nuevos.slice(0,6).map(r=>`
+          ${usuariosParaImportar.slice(0,6).map(u=>`
             <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:.8rem">
-              <strong>${r[cN]}</strong>
-              <span style="color:var(--muted);margin-left:6px">@${r[cU]} · ${r[cR]}</span>
+              <strong>${u.nombre}</strong>
+              <span style="color:var(--muted);margin-left:6px">@${u.usuario} · ${u.rol} · pass: ${u.pass}</span>
             </div>`).join('')}
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-green" style="flex:1" onclick="confirmarImportUsuarios(${JSON.stringify(nuevos).replace(/"/g,'&quot;')},'${cU}','${cN}','${cP||''}','${cR}')">
-            ✅ Importar ${nuevos.length} usuarios
+          <button class="btn btn-green" style="flex:1" onclick="confirmarImportUsuarios(${JSON.stringify(usuariosParaImportar).replace(/"/g,'&quot;')})">
+            ✅ Importar ${usuariosParaImportar.length} usuarios
           </button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-usuarios-preview').style.display='none'">Cancelar</button>
         </div>`;
@@ -1260,16 +1268,12 @@ function importXlsxUsuarios(file){
   document.getElementById('input-xlsx-usuarios').value='';
 }
 
-function confirmarImportUsuarios(rows,cU,cN,cP,cR){
+function confirmarImportUsuarios(usuarios){
   let count=0;
-  rows.forEach(r=>{
-    const u={
-      usuario:r[cU]?.toString().trim().toLowerCase(),
-      nombre:r[cN]?.toString().trim(),
-      pass:r[cP]?.toString().trim()||'cambiar123',
-      rol:r[cR]?.toString().trim().toLowerCase()
-    };
-    if(!DB.usuarios.find(x=>x.usuario===u.usuario)){DB.usuarios.push(u);count++;}
+  usuarios.forEach(u=>{
+    if(!DB.usuarios.find(x=>x.usuario===u.usuario)){
+      DB.usuarios.push(u); count++;
+    }
   });
   saveLocal(DB_KEY,DB);
   document.getElementById('import-usuarios-preview').style.display='none';
