@@ -805,6 +805,10 @@ function renderDash(){
 //  COURSES
 // ════════════════════════════════════════════════
 function populateCursos(){
+  // Merge cursos from config + cursos that actually exist in alumnos
+  const cursosDeAlumnos = [...new Set(DB.alumnos.map(a=>a.curso).filter(Boolean))];
+  const todosCursos = [...new Set([...DB.cursos, ...cursosDeAlumnos])].sort();
+
   const selects = ['sel-curso','sel-curso-qr','sel-curso-lista','rep-curso','f-curso'];
   selects.forEach(id=>{
     const el = document.getElementById(id);
@@ -812,18 +816,22 @@ function populateCursos(){
     const first = el.options[0];
     el.innerHTML='';
     el.appendChild(first||new Option('Todos los cursos',''));
-    DB.cursos.forEach(c=>{
-      // For sel-curso, add paralelos
+    todosCursos.forEach(c=>{
       if(id==='sel-curso'){
-        ['A','B','C','D'].forEach(p=>{
-          const exists = DB.alumnos.some(a=>a.curso===c && a.paralelo===p);
-          if(exists) el.appendChild(new Option(`${c} "${p}"`,`${c}|${p}`));
+        // Solo agregar combos curso+paralelo que realmente existen en alumnos
+        const paralelos = [...new Set(DB.alumnos.filter(a=>a.curso===c).map(a=>a.paralelo))].sort();
+        paralelos.forEach(p=>{
+          if(p) el.appendChild(new Option(`${c} "${p}"`,`${c}|${p}`));
         });
       } else {
         el.appendChild(new Option(c,c));
       }
     });
   });
+
+  // Also sync missing cursos back to DB.cursos so they appear in Config
+  cursosDeAlumnos.forEach(c=>{ if(!DB.cursos.includes(c)) DB.cursos.push(c); });
+  saveLocal(DB_KEY, DB);
 }
 
 function agregarCurso(){
