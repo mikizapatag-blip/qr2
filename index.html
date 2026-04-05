@@ -705,15 +705,15 @@ function loginSuccess(){
   const labels = {director:'Director',secretaria:'Secretaría',regente:'Regente',docente:'Docente'};
   pill.innerHTML = `<span class="role-pill ${roles[SESSION.rol]}">${labels[SESSION.rol]||SESSION.rol}</span>`;
 
-  // Show/hide nav by role
   const isAdmin = ['director','secretaria'].includes(SESSION.rol);
   const isDirector = SESSION.rol === 'director';
   document.getElementById('nav-alumnos').classList.toggle('hidden', !isAdmin);
   document.getElementById('nav-informes').classList.toggle('hidden', !isAdmin);
   document.getElementById('nav-config').classList.toggle('hidden', !isDirector);
-
-  // Docente mode: show obs type selector
   document.getElementById('sel-tipo-reg').style.display = SESSION.rol==='docente' ? 'block' : 'none';
+
+  // Guardar sesión
+  saveLocal('session_user', SESSION.usuario);
 
   populateCursos();
   renderDash();
@@ -724,6 +724,7 @@ function loginSuccess(){
 function doLogout(){
   stopCamera();
   SESSION = null;
+  localStorage.removeItem('session_user');
   document.getElementById('screen-app').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
   document.getElementById('login-pass').value='';
@@ -1594,20 +1595,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const btn = document.getElementById('btn-login-submit');
   if(btn){ btn.textContent='Ingresar'; btn.disabled=false; }
 });
-
-// Save session on login
-const _loginSuccess = loginSuccess;
-loginSuccess = function(){
-  _loginSuccess();
-  saveLocal('session_user', SESSION.usuario);
-};
-
-// Clear session on logout
-const _doLogout = doLogout;
-doLogout = function(){
-  _doLogout();
-  localStorage.removeItem('session_user');
-};
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
