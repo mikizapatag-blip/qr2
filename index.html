@@ -1000,17 +1000,29 @@ function importXlsxAlumnos(file){
     try{
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data,{type:'array'});
-      // Try sheet named "Alumnos" first, else first sheet
       const shName = wb.SheetNames.includes('Alumnos') ? 'Alumnos' : wb.SheetNames[0];
       const ws = wb.Sheets[shName];
-      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
 
-      if(!rows.length){ toast('El archivo está vacío','err'); return; }
-
-      // Normalize column names (case insensitive)
-      const normalize = s => s.toString().toLowerCase().trim()
+      // Detectar fila de encabezados buscando la celda que diga "RUDE"
+      const normalize = s => s ? s.toString().toLowerCase().trim()
         .replace(/[áä]/g,'a').replace(/[éë]/g,'e').replace(/[íï]/g,'i')
-        .replace(/[óö]/g,'o').replace(/[úü]/g,'u').replace(/ñ/g,'n');
+        .replace(/[óö]/g,'o').replace(/[úü]/g,'u').replace(/ñ/g,'n') : '';
+
+      // Buscar en qué fila está el encabezado "RUDE" (puede ser fila 1, 3, etc.)
+      let headerRow = 1;
+      const range = XLSX.utils.decode_range(ws['!ref']||'A1:Z1');
+      for(let r=range.s.r; r<=Math.min(range.s.r+9, range.e.r); r++){
+        for(let c=range.s.c; c<=range.e.c; c++){
+          const cell = ws[XLSX.utils.encode_cell({r,c})];
+          if(cell && normalize(cell.v)==='rude'){ headerRow = r+1; break; }
+        }
+        if(headerRow > 1) break;
+      }
+
+      // Leer desde la fila de encabezados (1-indexed para SheetJS)
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:'', range: headerRow-1});
+
+      if(!rows.length){ toast('El archivo está vacío o sin datos','err'); return; }
 
       const findCol = (row, keys) => {
         const cols = Object.keys(row);
@@ -1029,7 +1041,8 @@ function importXlsxAlumnos(file){
       const colParalelo = findCol(sample, ['paralelo','paralel','seccion','section']);
 
       if(!colRude||!colApel||!colNom||!colCurso){
-        toast('No se encontraron columnas RUDE/Apellidos/Nombres/Curso','err'); return;
+        // Debug: mostrar qué columnas sí encontró
+        toast('Columnas encontradas: '+Object.keys(sample).join(', '),'err'); return;
       }
 
       // Filter valid rows (skip examples and empty rows)
@@ -1122,12 +1135,27 @@ function importXlsxUsuarios(file){
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data,{type:'array'});
       const shName = wb.SheetNames.includes('Usuarios') ? 'Usuarios' : wb.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[shName],{defval:''});
+      const ws = wb.Sheets[shName];
+
+      const normalize = s=>s ? s.toString().toLowerCase().trim()
+        .replace(/[áä]/g,'a').replace(/[éë]/g,'e').replace(/[íï]/g,'i')
+        .replace(/[óö]/g,'o').replace(/[úü]/g,'u').replace(/ñ/g,'n') : '';
+
+      // Detectar fila de encabezados buscando "usuario" o "login"
+      let headerRow = 1;
+      const range = XLSX.utils.decode_range(ws['!ref']||'A1:Z1');
+      for(let r=range.s.r; r<=Math.min(range.s.r+9, range.e.r); r++){
+        for(let c=range.s.c; c<=range.e.c; c++){
+          const cell = ws[XLSX.utils.encode_cell({r,c})];
+          const v = normalize(cell?.v||'');
+          if(v==='usuario'||v.includes('login')||v.includes('user')){ headerRow=r+1; break; }
+        }
+        if(headerRow>1) break;
+      }
+
+      const rows = XLSX.utils.sheet_to_json(ws,{defval:'', range: headerRow-1});
       if(!rows.length){ toast('Archivo vacío','err'); return; }
 
-      const normalize = s=>s.toString().toLowerCase().trim()
-        .replace(/[áä]/g,'a').replace(/[éë]/g,'e').replace(/[íï]/g,'i')
-        .replace(/[óö]/g,'o').replace(/[úü]/g,'u').replace(/ñ/g,'n');
       const findCol=(row,keys)=>{const cols=Object.keys(row);for(const k of keys){const f=cols.find(c=>normalize(c)===k||normalize(c).includes(k));if(f)return f;}return null;};
 
       const s=rows[0];
@@ -1136,7 +1164,7 @@ function importXlsxUsuarios(file){
       const cP=findCol(s,['contrasena','password','clave','pass']);
       const cR=findCol(s,['rol','role','cargo','tipo']);
 
-      if(!cU||!cN||!cR){ toast('Columnas requeridas: Usuario, Nombre, Rol','err'); return; }
+      if(!cU||!cN||!cR){ toast('Columnas encontradas: '+Object.keys(s).join(', '),'err'); return; }
 
       const validos=rows.filter(r=>r[cU]?.toString().trim()&&r[cN]?.toString().trim()&&r[cR]?.toString().trim());
       const nuevos=validos.filter(r=>!DB.usuarios.find(u=>u.usuario===r[cU]?.toString().trim().toLowerCase()));
