@@ -416,6 +416,13 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
         </select>
         <div id="alumnos-count" style="font-size:.78rem;color:var(--muted);margin-bottom:8px"></div>
         <div id="alumnos-list"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="limpiarAlumnosEjemplo()">🗑 Quitar alumnos de ejemplo</button>
+          <button class="btn btn-sm" style="background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.3);color:var(--red)"
+            onclick="if(confirm('¿Borrar TODOS los alumnos? Esta acción no se puede deshacer.')){DB.alumnos=[];saveLocal(DB_KEY,DB);populateCursos();renderAlumnosList();toast('Alumnos eliminados')}">
+            ⚠ Borrar todos
+          </button>
+        </div>
       </div>
     </div>
 
@@ -805,9 +812,16 @@ function renderDash(){
 //  COURSES
 // ════════════════════════════════════════════════
 function populateCursos(){
-  // Merge cursos from config + cursos that actually exist in alumnos
-  const cursosDeAlumnos = [...new Set(DB.alumnos.map(a=>a.curso).filter(Boolean))];
-  const todosCursos = [...new Set([...DB.cursos, ...cursosDeAlumnos])].sort();
+  // Siempre construir desde los alumnos reales — única fuente de verdad
+  const cursosDeAlumnos = [...new Set(DB.alumnos.map(a=>a.curso).filter(Boolean))].sort((a,b)=>{
+    // Ordenar: 1ro, 2do, 3ro, 4to, 5to, 6to
+    const ord = {'1ro':1,'2do':2,'3ro':3,'4to':4,'5to':5,'6to':6};
+    const ka = ord[a.slice(0,3)]||99, kb = ord[b.slice(0,3)]||99;
+    return ka - kb || a.localeCompare(b);
+  });
+
+  // Sincronizar al DB.cursos
+  cursosDeAlumnos.forEach(c=>{ if(!DB.cursos.includes(c)) DB.cursos.push(c); });
 
   const selects = ['sel-curso','sel-curso-qr','sel-curso-lista','rep-curso','f-curso'];
   selects.forEach(id=>{
@@ -815,23 +829,20 @@ function populateCursos(){
     if(!el) return;
     const first = el.options[0];
     el.innerHTML='';
-    el.appendChild(first||new Option('Todos los cursos',''));
-    todosCursos.forEach(c=>{
+    el.appendChild(first || new Option('Todos los cursos',''));
+    cursosDeAlumnos.forEach(c=>{
       if(id==='sel-curso'){
-        // Solo agregar combos curso+paralelo que realmente existen en alumnos
-        const paralelos = [...new Set(DB.alumnos.filter(a=>a.curso===c).map(a=>a.paralelo))].sort();
+        // Paralelos reales que existen en los alumnos, ordenados A-F
+        const paralelos = [...new Set(DB.alumnos.filter(a=>a.curso===c).map(a=>a.paralelo))]
+          .filter(Boolean).sort();
         paralelos.forEach(p=>{
-          if(p) el.appendChild(new Option(`${c} "${p}"`,`${c}|${p}`));
+          el.appendChild(new Option(`${c} "${p}"`, `${c}|${p}`));
         });
       } else {
-        el.appendChild(new Option(c,c));
+        el.appendChild(new Option(c, c));
       }
     });
   });
-
-  // Also sync missing cursos back to DB.cursos so they appear in Config
-  cursosDeAlumnos.forEach(c=>{ if(!DB.cursos.includes(c)) DB.cursos.push(c); });
-  saveLocal(DB_KEY, DB);
 }
 
 function agregarCurso(){
@@ -893,7 +904,17 @@ function guardarAlumno(){
   apiCall('addAlumno', al);
 }
 
-function renderAlumnosList(){
+function limpiarAlumnosEjemplo(){
+  // Elimina alumnos cuyo RUDE empieza con '2024000' (son los de ejemplo)
+  const antes = DB.alumnos.length;
+  DB.alumnos = DB.alumnos.filter(a => !a.rude.toString().startsWith('2024000'));
+  const eliminados = antes - DB.alumnos.length;
+  if(!eliminados){ toast('No se encontraron alumnos de ejemplo'); return; }
+  saveLocal(DB_KEY, DB);
+  populateCursos();
+  renderAlumnosList();
+  toast(`🗑 ${eliminados} alumno(s) de ejemplo eliminados`);
+}
   const curso = document.getElementById('sel-curso-lista')?.value||'';
   const list = curso ? DB.alumnos.filter(a=>a.curso===curso) : DB.alumnos;
   const el = document.getElementById('alumnos-list');
