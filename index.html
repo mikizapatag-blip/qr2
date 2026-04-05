@@ -249,7 +249,7 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
     <div class="login-err" id="login-err"></div>
     <div class="offline-badge">
       <div class="dot-offline" id="dot-conn"></div>
-      <span id="conn-label">Verificando conexión…</span>
+      <span id="conn-label">Sin conexión al servidor (modo local)</span>
     </div>
   </div>
 </div>
@@ -919,6 +919,8 @@ function limpiarAlumnosEjemplo(){
   renderAlumnosList();
   toast(`🗑 ${eliminados} alumno(s) de ejemplo eliminados`);
 }
+
+function renderAlumnosList(){
   const curso = document.getElementById('sel-curso-lista')?.value||'';
   const list = curso ? DB.alumnos.filter(a=>a.curso===curso) : DB.alumnos;
   const el = document.getElementById('alumnos-list');
