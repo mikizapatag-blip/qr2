@@ -667,17 +667,20 @@ async function doLogin(){
   errEl.style.display='none';
   btn.textContent='Verificando…'; btn.disabled=true;
 
-  // Try API first if online
   let found = null;
+
+  // Intentar API solo si hay URL configurada y hay conexión
   if(isOnline && API_URL){
     try{
-      const r = await fetch(`${API_URL}?action=login&usuario=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`);
+      const ctrl = new AbortController();
+      setTimeout(()=>ctrl.abort(), 4000); // timeout 4s
+      const r = await fetch(`${API_URL}?action=login&usuario=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`, {signal:ctrl.signal});
       const d = await r.json();
-      if(d.ok){ found = d.user; saveLocal('cached_users', DB.usuarios); }
-    }catch(e){}
+      if(d.ok) found = d.user;
+    }catch(e){ /* sin API, usar local */ }
   }
 
-  // Fallback: local DB
+  // Siempre intentar local como respaldo
   if(!found){
     found = DB.usuarios.find(x => x.usuario===u && x.pass===p);
   }
@@ -685,7 +688,7 @@ async function doLogin(){
   btn.textContent='Ingresar'; btn.disabled=false;
 
   if(!found){
-    errEl.textContent = isOnline ? 'Usuario o contraseña incorrectos.' : 'Sin conexión. Verifica tus datos locales.';
+    errEl.textContent='Usuario o contraseña incorrectos.';
     errEl.style.display='block'; return;
   }
 
@@ -1578,14 +1581,18 @@ if('serviceWorker' in navigator){
 // ════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', ()=>{
   updateConn();
-  // Load API URL from storage
   if(localStorage.getItem('api_url')) API_URL = localStorage.getItem('api_url');
-  // Try auto-login from session
+
+  // Auto-login desde sesión guardada
   const saved = loadLocal('session_user');
   if(saved){
     const u = DB.usuarios.find(x=>x.usuario===saved);
-    if(u){ SESSION=u; loginSuccess(); }
+    if(u){ SESSION=u; loginSuccess(); return; }
+    else { localStorage.removeItem('session_user'); }
   }
+  // Asegurarse que el botón de login esté habilitado
+  const btn = document.getElementById('btn-login-submit');
+  if(btn){ btn.textContent='Ingresar'; btn.disabled=false; }
 });
 
 // Save session on login
@@ -1604,7 +1611,6 @@ doLogout = function(){
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-// Click-through for file input labels
 document.addEventListener('click', e=>{
   if(e.target.id==='drop-alumnos'||e.target.closest('#drop-alumnos'))
     document.getElementById('input-xlsx-alumnos').click();
