@@ -816,6 +816,10 @@ function renderDash(){
 //  COURSES
 // ════════════════════════════════════════════════
 function populateCursos(){
+  // DEBUG: verificar qué hay en DB
+  const muestra = DB.alumnos.slice(0,3);
+  if(muestra.length) console.log('DEBUG alumnos muestra:', JSON.stringify(muestra));
+
   // Siempre construir desde los alumnos reales — única fuente de verdad
   const cursosDeAlumnos = [...new Set(DB.alumnos.map(a=>a.curso).filter(Boolean))].sort((a,b)=>{
     // Ordenar: 1ro, 2do, 3ro, 4to, 5to, 6to
