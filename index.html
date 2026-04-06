@@ -299,61 +299,166 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
     <div class="tab-pane" id="tab-lista">
       <h2 class="section-title" id="lista-title">Pasar lista</h2>
 
-      <div class="card">
-        <div class="card-title">Seleccionar curso</div>
-        <select class="select-curso" id="sel-curso" onchange="onCursoChange()">
-          <option value="">— Elige un curso —</option>
-        </select>
-        <!-- Modo docente: elegir qué hacer -->
-        <div id="modo-docente-wrap" style="display:none">
-          <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;font-weight:600">¿Qué vas a registrar?</div>
-          <div style="display:flex;gap:8px">
-            <button class="btn modo-btn active" id="modo-asistencia" onclick="setModoDocente('asistencia')">
-              ✅ Asistencia
-            </button>
-            <button class="btn modo-btn" id="modo-observacion" onclick="setModoDocente('observacion')">
-              📝 Observación
-            </button>
+      <!-- MODO SELECTOR: regente ve 3 opciones, docente ve 2 -->
+      <div class="card" id="modo-selector-card">
+        <div class="card-title">¿Qué vas a registrar?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="modo-btns-wrap">
+          <!-- Regente/Secretaría -->
+          <button class="btn modo-btn active" id="modo-btn-atrasos" onclick="setModo('atrasos')" style="display:none">
+            ⏰ Atrasos
+          </button>
+          <button class="btn modo-btn" id="modo-btn-permisos" onclick="setModo('permisos')" style="display:none">
+            📋 Permisos
+          </button>
+          <button class="btn modo-btn" id="modo-btn-lista" onclick="setModo('lista')" style="display:none">
+            ✅ Pasar lista
+          </button>
+          <!-- Docente -->
+          <button class="btn modo-btn active" id="modo-btn-asistencia" onclick="setModo('asistencia')" style="display:none">
+            ✅ Asistencia
+          </button>
+          <button class="btn modo-btn" id="modo-btn-observacion" onclick="setModo('observacion')" style="display:none">
+            📝 Observación
+          </button>
+        </div>
+      </div>
+
+      <!-- ── PANEL: ATRASOS ── -->
+      <div id="panel-atrasos" style="display:none">
+        <div class="card" style="border-color:rgba(210,153,34,.3)">
+          <div class="card-title" style="color:var(--amber)">⏰ Registro de atrasos — puerta del colegio</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">
+            Escanea el QR del alumno que llegó tarde. Se registra automáticamente con hora y tu nombre.
+          </div>
+          <div id="scan-result-atraso" class="scan-result" style="display:none"></div>
+          <div class="scanner-wrap" id="scanner-wrap-atrasos">
+            <video id="scanner-video-atrasos" autoplay muted playsinline></video>
+            <div class="scan-overlay"><div class="scan-box" style="border-color:var(--amber)"><div class="scan-line" style="background:linear-gradient(90deg,transparent,var(--amber),transparent)"></div></div></div>
+            <div class="scan-hint" id="scan-hint-atrasos">Apunta al QR del alumno atrasado</div>
+          </div>
+          <div class="cam-btns mt8">
+            <button class="btn btn-amber" style="flex:1" onclick="startCameraAtrasos()">▶ Iniciar cámara</button>
+            <button class="btn btn-ghost" onclick="stopCameraAtrasos()">⏹</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Atrasos registrados hoy <span id="atrasos-count" style="color:var(--amber)"></span></div>
+          <div id="atrasos-list"><div class="empty-state">Sin atrasos aún hoy</div></div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: PERMISOS ── -->
+      <div id="panel-permisos" style="display:none">
+        <div class="card" style="border-color:rgba(88,166,255,.3)">
+          <div class="card-title" style="color:var(--accent)">📋 Registro de permisos del día</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">
+            Registra los alumnos que tienen permiso/licencia hoy. Los docentes verán "PERMISO" en lugar de "AUSENTE".
+          </div>
+          <!-- Buscar alumno por nombre o RUDE -->
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input type="text" id="permiso-buscar" placeholder="Buscar por nombre o RUDE…"
+              style="flex:1;padding:10px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;outline:none"
+              oninput="buscarAlumnoPermiso(this.value)">
+          </div>
+          <div id="permiso-resultados" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--rs);margin-bottom:12px"></div>
+          <!-- Motivo del permiso -->
+          <div id="permiso-form" style="display:none;background:var(--surf2);border-radius:var(--rs);padding:14px;margin-bottom:10px">
+            <div style="font-weight:600;font-size:.9rem;margin-bottom:10px" id="permiso-alumno-name"></div>
+            <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Motivo</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+              <button class="obs-chip" data-val="Enfermedad">🤒 Enfermedad</button>
+              <button class="obs-chip" data-val="Cita médica">🏥 Cita médica</button>
+              <button class="obs-chip" data-val="Viaje familiar">✈ Viaje familiar</button>
+              <button class="obs-chip" data-val="Duelo">🕯 Duelo</button>
+              <button class="obs-chip" data-val="Trámite">📄 Trámite</button>
+              <button class="obs-chip" data-val="Otro motivo">📝 Otro</button>
+            </div>
+            <input type="text" id="permiso-obs-custom" placeholder="Observación adicional (opcional)"
+              style="width:100%;padding:9px 12px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px">
+            <button class="btn btn-primary btn-full" onclick="guardarPermiso()">✅ Registrar permiso</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Permisos registrados hoy <span id="permisos-count" style="color:var(--accent)"></span></div>
+          <div id="permisos-list"><div class="empty-state">Sin permisos registrados hoy</div></div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: PASAR LISTA ── -->
+      <div id="panel-lista" style="display:none">
+        <div class="card">
+          <div class="card-title">Seleccionar curso</div>
+          <select class="select-curso" id="sel-curso" onchange="onCursoChange()">
+            <option value="">— Elige un curso —</option>
+          </select>
+        </div>
+
+        <!-- Scanner -->
+        <div class="card" id="scanner-card" style="display:none">
+          <div class="card-title" id="scanner-card-title">✅ Escanear QR — asistencia</div>
+          <div id="scan-result-box" class="scan-result"></div>
+          <div class="scanner-wrap" id="scanner-wrap">
+            <video id="scanner-video" autoplay muted playsinline></video>
+            <div class="scan-overlay"><div class="scan-box"><div class="scan-line"></div></div></div>
+            <div class="scan-hint" id="scan-hint">Apunta al QR del estudiante</div>
+          </div>
+          <div class="cam-btns mt8">
+            <button class="btn btn-primary" style="flex:1" onclick="startCamera()">▶ Cámara</button>
+            <button class="btn btn-ghost" onclick="stopCamera()">⏹</button>
+          </div>
+        </div>
+
+        <!-- Attendance list -->
+        <div id="att-list-wrap" style="display:none">
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-val s-green" id="cnt-p">0</div><div class="stat-lbl">Presentes</div></div>
+            <div class="stat-box"><div class="stat-val s-red" id="cnt-a">0</div><div class="stat-lbl">Ausentes</div></div>
+            <div class="stat-box"><div class="stat-val s-blue" id="cnt-t">0</div><div class="stat-lbl">Total</div></div>
+          </div>
+          <div id="att-list"></div>
+          <div class="mt12" style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-green btn-full" onclick="exportarDireccion()">📤 Exportar a Dirección</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetAtt()">Reiniciar</button>
           </div>
         </div>
       </div>
 
-      <!-- Scanner -->
-      <div class="card" id="scanner-card" style="display:none">
-        <div class="card-title" id="scanner-card-title">Escanear QR</div>
-        <div id="scan-result-box" class="scan-result"></div>
-        <div class="scanner-wrap" id="scanner-wrap">
-          <video id="scanner-video" autoplay muted playsinline></video>
-          <div class="scan-overlay">
-            <div class="scan-box"><div class="scan-line"></div></div>
+      <!-- ── PANEL: DOCENTE ASISTENCIA + OBSERVACION ── -->
+      <div id="panel-docente" style="display:none">
+        <div class="card">
+          <div class="card-title">Seleccionar curso</div>
+          <select class="select-curso" id="sel-curso-doc" onchange="onCursoChangeDoc()">
+            <option value="">— Elige un curso —</option>
+          </select>
+        </div>
+        <div class="card" id="scanner-card-doc" style="display:none">
+          <div class="card-title" id="scanner-card-title-doc">Escanear QR</div>
+          <div id="scan-result-box-doc" class="scan-result"></div>
+          <div class="scanner-wrap" id="scanner-wrap-doc">
+            <video id="scanner-video-doc" autoplay muted playsinline></video>
+            <div class="scan-overlay"><div class="scan-box"><div class="scan-line"></div></div></div>
+            <div class="scan-hint" id="scan-hint-doc">Apunta al QR</div>
           </div>
-          <div class="scan-hint" id="scan-hint">Apunta al QR del estudiante</div>
+          <div class="cam-btns mt8">
+            <button class="btn btn-primary" style="flex:1" onclick="startCameraDoc()">▶ Cámara</button>
+            <button class="btn btn-ghost" onclick="stopCameraDoc()">⏹</button>
+          </div>
         </div>
-        <div class="cam-btns mt8">
-          <button class="btn btn-primary" style="flex:1" onclick="startCamera()">▶ Cámara</button>
-          <button class="btn btn-ghost" onclick="stopCamera()">⏹</button>
+        <div id="att-list-wrap-doc" style="display:none">
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-val s-green" id="cnt-p-doc">0</div><div class="stat-lbl">Presentes</div></div>
+            <div class="stat-box"><div class="stat-val s-red" id="cnt-a-doc">0</div><div class="stat-lbl">Ausentes</div></div>
+            <div class="stat-box"><div class="stat-val s-blue" id="cnt-t-doc">0</div><div class="stat-lbl">Total</div></div>
+          </div>
+          <div id="att-list-doc"></div>
+          <button class="btn btn-green btn-full mt12" onclick="exportarDireccionDoc()">📤 Exportar a Dirección</button>
         </div>
-      </div>
-
-      <!-- Attendance list (regente + docente asistencia) -->
-      <div id="att-list-wrap" style="display:none">
-        <div class="stat-row">
-          <div class="stat-box"><div class="stat-val s-green" id="cnt-p">0</div><div class="stat-lbl">Presentes</div></div>
-          <div class="stat-box"><div class="stat-val s-red" id="cnt-a">0</div><div class="stat-lbl">Ausentes</div></div>
-          <div class="stat-box"><div class="stat-val s-blue" id="cnt-t">0</div><div class="stat-lbl">Total</div></div>
-        </div>
-        <div id="att-list"></div>
-        <div class="mt12" style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-green btn-full" onclick="exportarDireccion()">📤 Exportar a Dirección</button>
-          <button class="btn btn-ghost btn-sm" onclick="resetAtt()">Reiniciar</button>
+        <div id="obs-list-wrap" style="display:none">
+          <div class="card-title" style="margin-bottom:10px">Observaciones registradas hoy</div>
+          <div id="obs-list-hoy"></div>
         </div>
       </div>
 
-      <!-- Observaciones registradas hoy (modo observación docente) -->
-      <div id="obs-list-wrap" style="display:none">
-        <div class="card-title" style="margin-bottom:10px">Observaciones registradas hoy</div>
-        <div id="obs-list-hoy"></div>
-      </div>
     </div>
 
     <!-- ── TAB: ALUMNOS (Admin) ── -->
@@ -776,6 +881,7 @@ function loginSuccess(){
   renderDash();
   checkPending();
   document.getElementById('rep-fecha').valueAsDate = new Date();
+  initModoButtons();
 }
 
 function doLogout(){
@@ -801,7 +907,7 @@ function goTab(name, btn){
   if(name==='informes'){ cargarInforme(); document.getElementById('rep-fecha').valueAsDate=new Date(); }
   if(name==='novedades'){ cargarNovedades(); document.getElementById('nov-fecha').valueAsDate=new Date(); }
   if(name==='config') renderConfig();
-  if(name!=='lista') stopCamera();
+  if(name!=='lista'){ stopCamera(); stopCameraAtrasos(); stopCameraDoc(); }
 }
 
 // ════════════════════════════════════════════════
@@ -893,7 +999,7 @@ function populateCursos(){
   const cursos = [...new Set(combos.map(c=>c.curso))];
   cursos.forEach(c=>{ if(!DB.cursos.includes(c)) DB.cursos.push(c); });
 
-  const selects = ['sel-curso','sel-curso-qr','sel-curso-lista','rep-curso','f-curso'];
+  const selects = ['sel-curso','sel-curso-doc','sel-curso-qr','sel-curso-lista','rep-curso','f-curso'];
   selects.forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
@@ -1352,49 +1458,32 @@ function onCursoChange(){
   const val = document.getElementById('sel-curso').value;
   const scannerCard = document.getElementById('scanner-card');
   const attWrap = document.getElementById('att-list-wrap');
-  const obsWrap = document.getElementById('obs-list-wrap');
-  if(!val){ scannerCard.style.display='none'; attWrap.style.display='none'; obsWrap.style.display='none'; return; }
-  attCurso = val;
-  attSession = {};
-  scannerCard.style.display='block';
-  updateListaUI();
+  if(!val){ if(scannerCard) scannerCard.style.display='none'; if(attWrap) attWrap.style.display='none'; return; }
+  attCurso = val; attSession = {};
+  if(scannerCard) scannerCard.style.display='block';
+  if(attWrap) attWrap.style.display='block';
+  renderAttList();
 }
 
-function setModoDocente(modo){
-  modoActual = modo;
-  document.getElementById('modo-asistencia').classList.toggle('active', modo==='asistencia');
-  document.getElementById('modo-observacion').classList.toggle('active', modo==='observacion');
-  updateListaUI();
-  stopCamera();
-}
-
-function updateListaUI(){
-  const esObs = SESSION.rol==='docente' && modoActual==='observacion';
-  const attWrap = document.getElementById('att-list-wrap');
-  const obsWrap = document.getElementById('obs-list-wrap');
-  const title  = document.getElementById('scanner-card-title');
-  attWrap.style.display = esObs ? 'none' : (attCurso ? 'block' : 'none');
-  obsWrap.style.display = esObs && attCurso ? 'block' : 'none';
-  if(title) title.textContent = esObs ? '📝 Escanear QR para observación' : '✅ Escanear QR para asistencia';
-  if(!esObs) renderAttList();
-  if(esObs) renderObsHoy();
-}
+function setModoDocente(modo){ setModo(modo); }
+function updateListaUI(){}
 
 function renderAttList(){
   if(!attCurso) return;
   const [curso, paralelo] = attCurso.split('|');
   const alumnos = DB.alumnos.filter(a=>a.curso===curso && a.paralelo===paralelo);
   const el = document.getElementById('att-list');
+  const permisosHoy = DB.asistencias.filter(a=>a.tipo==='permiso'&&a.fecha===todayStr()).map(a=>a.rude);
+  const atrasosHoy  = DB.asistencias.filter(a=>a.tipo==='atraso'&&a.fecha===todayStr()).map(a=>a.rude);
   let p=0, a=0;
   if(!alumnos.length){ el.innerHTML='<div class="empty-state">Sin alumnos en este curso</div>'; return; }
   el.innerHTML = alumnos.map(al=>{
     const reg = attSession[al.rude];
-    const estado = reg ? reg.estado : 'A';
-    if(estado==='P') p++; else a++;
-    const cls = estado==='P'?'present':'absent';
-    const badge = estado==='P'?'<span class="li-badge badge-p">P</span>':
-                  estado==='L'?'<span class="li-badge badge-l">L</span>':
-                  '<span class="li-badge badge-a">A</span>';
+    let cls='absent', badge='<span class="li-badge badge-a">AUSENTE</span>';
+    if(reg){ p++; cls='present'; badge='<span class="li-badge badge-p">PRESENTE</span>'; }
+    else if(permisosHoy.includes(al.rude)){ badge='<span class="li-badge" style="background:rgba(88,166,255,.2);color:var(--accent)">PERMISO</span>'; a++; }
+    else if(atrasosHoy.includes(al.rude)){ badge='<span class="li-badge badge-l">ATRASADO</span>'; a++; }
+    else a++;
     return `<div class="list-item ${cls}" id="row-${al.rude}">
       <div class="status-dot"></div>
       <div class="li-info">
