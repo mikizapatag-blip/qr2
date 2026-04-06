@@ -216,7 +216,13 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
 .select-curso:focus{border-color:var(--accent)}
 .pending-count{background:var(--red);color:#fff;border-radius:10px;font-size:.65rem;font-weight:700;padding:2px 6px;margin-left:4px}
 
-/* DARK SCROLLBAR */
+.modo-btn{flex:1;background:var(--surf2);border:1px solid var(--border);color:var(--muted);border-radius:var(--rs);padding:10px;font-size:.85rem}
+.modo-btn.active{background:rgba(88,166,255,.15);border-color:var(--accent);color:var(--accent);font-weight:600}
+.obs-item{padding:12px 14px;background:var(--surf2);border-radius:var(--rs);border-left:3px solid var(--amber);margin-bottom:8px}
+.obs-item.fel{border-left-color:var(--green)}
+.obs-item-name{font-size:.88rem;font-weight:600}
+.obs-item-obs{font-size:.78rem;color:var(--muted);margin-top:3px}
+.obs-item-meta{font-size:.7rem;color:var(--muted);margin-top:4px}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -291,39 +297,45 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
 
     <!-- ── TAB: LISTA (Regente/Docente) ── -->
     <div class="tab-pane" id="tab-lista">
-      <h2 class="section-title">Pasar lista</h2>
+      <h2 class="section-title" id="lista-title">Pasar lista</h2>
 
       <div class="card">
         <div class="card-title">Seleccionar curso</div>
         <select class="select-curso" id="sel-curso" onchange="onCursoChange()">
           <option value="">— Elige un curso —</option>
         </select>
-        <select class="select-curso" id="sel-tipo-reg" style="display:none">
-          <option value="asistencia">Asistencia (Regente)</option>
-          <option value="observacion">Observación (Docente)</option>
-        </select>
+        <!-- Modo docente: elegir qué hacer -->
+        <div id="modo-docente-wrap" style="display:none">
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;font-weight:600">¿Qué vas a registrar?</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn modo-btn active" id="modo-asistencia" onclick="setModoDocente('asistencia')">
+              ✅ Asistencia
+            </button>
+            <button class="btn modo-btn" id="modo-observacion" onclick="setModoDocente('observacion')">
+              📝 Observación
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Scanner -->
       <div class="card" id="scanner-card" style="display:none">
-        <div class="card-title">Escanear QR</div>
+        <div class="card-title" id="scanner-card-title">Escanear QR</div>
         <div id="scan-result-box" class="scan-result"></div>
         <div class="scanner-wrap" id="scanner-wrap">
           <video id="scanner-video" autoplay muted playsinline></video>
           <div class="scan-overlay">
-            <div class="scan-box">
-              <div class="scan-line"></div>
-            </div>
+            <div class="scan-box"><div class="scan-line"></div></div>
           </div>
           <div class="scan-hint" id="scan-hint">Apunta al QR del estudiante</div>
         </div>
         <div class="cam-btns mt8">
-          <button class="btn btn-primary" style="flex:1" id="btn-cam-start" onclick="startCamera()">▶ Cámara</button>
+          <button class="btn btn-primary" style="flex:1" onclick="startCamera()">▶ Cámara</button>
           <button class="btn btn-ghost" onclick="stopCamera()">⏹</button>
         </div>
       </div>
 
-      <!-- Attendance list -->
+      <!-- Attendance list (regente + docente asistencia) -->
       <div id="att-list-wrap" style="display:none">
         <div class="stat-row">
           <div class="stat-box"><div class="stat-val s-green" id="cnt-p">0</div><div class="stat-lbl">Presentes</div></div>
@@ -335,6 +347,12 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
           <button class="btn btn-green btn-full" onclick="exportarDireccion()">📤 Exportar a Dirección</button>
           <button class="btn btn-ghost btn-sm" onclick="resetAtt()">Reiniciar</button>
         </div>
+      </div>
+
+      <!-- Observaciones registradas hoy (modo observación docente) -->
+      <div id="obs-list-wrap" style="display:none">
+        <div class="card-title" style="margin-bottom:10px">Observaciones registradas hoy</div>
+        <div id="obs-list-hoy"></div>
       </div>
     </div>
 
@@ -424,6 +442,30 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- ── TAB: NOVEDADES ── -->
+    <div class="tab-pane" id="tab-novedades">
+      <h2 class="section-title">Novedades / Observaciones</h2>
+      <div class="card">
+        <div class="card-title">Filtros</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Fecha</label>
+            <input type="date" id="nov-fecha">
+          </div>
+          <div class="form-field">
+            <label>Curso</label>
+            <select id="nov-curso"><option value="">Todos</option></select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Docente</label>
+          <select id="nov-docente"><option value="">Todos</option></select>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="cargarNovedades()">Ver novedades</button>
+      </div>
+      <div id="novedades-content"></div>
     </div>
 
     <!-- ── TAB: INFORMES ── -->
@@ -528,6 +570,10 @@ h2.section-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
       Alumnos
     </button>
+    <button class="nav-item hidden" onclick="goTab('novedades',this)" data-tab="novedades" id="nav-novedades">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Novedades
+    </button>
     <button class="nav-item hidden" onclick="goTab('informes',this)" data-tab="informes" id="nav-informes">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Informes
@@ -603,6 +649,7 @@ let DB = loadLocal(DB_KEY, {
 // attendance state for current session
 let attSession = {};  // rude -> {estado, hora}
 let attCurso = '';
+let modoActual = 'asistencia';  // 'asistencia' | 'observacion'
 let scanStream = null;
 let scanRAF = null;
 let lastScan = '';
@@ -710,10 +757,17 @@ function loginSuccess(){
 
   const isAdmin = ['director','secretaria'].includes(SESSION.rol);
   const isDirector = SESSION.rol === 'director';
+  const isDocente = SESSION.rol === 'docente';
   document.getElementById('nav-alumnos').classList.toggle('hidden', !isAdmin);
+  document.getElementById('nav-novedades').classList.toggle('hidden', !isAdmin);
   document.getElementById('nav-informes').classList.toggle('hidden', !isAdmin);
   document.getElementById('nav-config').classList.toggle('hidden', !isDirector);
-  document.getElementById('sel-tipo-reg').style.display = SESSION.rol==='docente' ? 'block' : 'none';
+
+  // Docente: mostrar selector de modo (asistencia u observación)
+  document.getElementById('modo-docente-wrap').style.display = isDocente ? 'block' : 'none';
+  // Regente: título específico
+  if(SESSION.rol==='regente') document.getElementById('lista-title').textContent = 'Pasar lista';
+  if(isDocente) document.getElementById('lista-title').textContent = 'Registro docente';
 
   // Guardar sesión
   saveLocal('session_user', SESSION.usuario);
@@ -744,7 +798,8 @@ function goTab(name, btn){
   if(btn) btn.classList.add('active');
   if(name==='lista') renderAttList();
   if(name==='alumnos') renderAlumnosList();
-  if(name==='informes') cargarInforme();
+  if(name==='informes'){ cargarInforme(); document.getElementById('rep-fecha').valueAsDate=new Date(); }
+  if(name==='novedades'){ cargarNovedades(); document.getElementById('nov-fecha').valueAsDate=new Date(); }
   if(name==='config') renderConfig();
   if(name!=='lista') stopCamera();
 }
@@ -1297,12 +1352,32 @@ function onCursoChange(){
   const val = document.getElementById('sel-curso').value;
   const scannerCard = document.getElementById('scanner-card');
   const attWrap = document.getElementById('att-list-wrap');
-  if(!val){ scannerCard.style.display='none'; attWrap.style.display='none'; return; }
+  const obsWrap = document.getElementById('obs-list-wrap');
+  if(!val){ scannerCard.style.display='none'; attWrap.style.display='none'; obsWrap.style.display='none'; return; }
   attCurso = val;
   attSession = {};
   scannerCard.style.display='block';
-  attWrap.style.display='block';
-  renderAttList();
+  updateListaUI();
+}
+
+function setModoDocente(modo){
+  modoActual = modo;
+  document.getElementById('modo-asistencia').classList.toggle('active', modo==='asistencia');
+  document.getElementById('modo-observacion').classList.toggle('active', modo==='observacion');
+  updateListaUI();
+  stopCamera();
+}
+
+function updateListaUI(){
+  const esObs = SESSION.rol==='docente' && modoActual==='observacion';
+  const attWrap = document.getElementById('att-list-wrap');
+  const obsWrap = document.getElementById('obs-list-wrap');
+  const title  = document.getElementById('scanner-card-title');
+  attWrap.style.display = esObs ? 'none' : (attCurso ? 'block' : 'none');
+  obsWrap.style.display = esObs && attCurso ? 'block' : 'none';
+  if(title) title.textContent = esObs ? '📝 Escanear QR para observación' : '✅ Escanear QR para asistencia';
+  if(!esObs) renderAttList();
+  if(esObs) renderObsHoy();
 }
 
 function renderAttList(){
@@ -1383,14 +1458,14 @@ function processQR(rude){
     return;
   }
 
-  const tipo = SESSION.rol==='docente' ? document.getElementById('sel-tipo-reg').value : 'asistencia';
+  // Determinar modo: docente usa modoActual, regente siempre asistencia
+  const tipo = (SESSION.rol==='docente' && modoActual==='observacion') ? 'observacion' : 'asistencia';
 
   if(tipo==='observacion'){
-    // Open observation modal
     stopCamera();
     pendingObs = alumno;
     document.getElementById('modal-obs-name').textContent=`${alumno.apellidos}, ${alumno.nombres}`;
-    document.getElementById('modal-obs-sub').textContent=`RUDE: ${alumno.rude} · ${alumno.curso} "${alumno.paralelo}"`;
+    document.getElementById('modal-obs-sub').textContent=`RUDE: ${alumno.rude} · ${alumno.curso} "${alumno.paralelo}" · ${SESSION.nombre}`;
     document.querySelectorAll('.obs-chip').forEach(c=>c.classList.remove('sel'));
     document.getElementById('obs-custom').value='';
     document.getElementById('modal-obs').classList.add('open');
@@ -1407,10 +1482,10 @@ function processQR(rude){
   }
 
   const hora = new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'});
-  attSession[rude] = {estado:'P', hora};
+  attSession[rude] = {estado:'P', hora, docente: SESSION.nombre};
   rb.className='scan-result ok'; rb.style.display='block';
   rb.innerHTML=`<div class="scan-result-name">✓ ${alumno.apellidos}, ${alumno.nombres}</div>
-    <div class="scan-result-sub">${alumno.curso} "${alumno.paralelo}" · ${hora}</div>`;
+    <div class="scan-result-sub">${alumno.curso} "${alumno.paralelo}" · ${hora} · ${SESSION.nombre}</div>`;
   wrap.classList.add('flash-ok'); setTimeout(()=>wrap.classList.remove('flash-ok'),500);
   document.getElementById('scan-hint').textContent=`✓ ${alumno.apellidos}`;
   renderAttList();
@@ -1437,16 +1512,19 @@ function guardarObservacion(){
   const custom = document.getElementById('obs-custom').value.trim();
   const obs = [...selChips, custom].filter(Boolean).join(' | ');
   if(!obs){ toast('Selecciona al menos una observación','err'); return; }
+  const esFelicitacion = selChips.some(v=>['Excelente participación','Trabajo sobresaliente','Gran mejora'].includes(v));
 
   const reg = {
     id: Date.now().toString(),
     rude: pendingObs.rude,
     nombre: `${pendingObs.apellidos}, ${pendingObs.nombres}`,
-    curso: pendingObs.curso, paralelo: pendingObs.paralelo,
+    curso: pendingObs.curso,
+    paralelo: pendingObs.paralelo,
     fecha: todayStr(),
     hora: new Date().toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'}),
     docente: SESSION.nombre,
     tipo: 'observacion',
+    esFelicitacion,
     obs
   };
 
@@ -1454,7 +1532,23 @@ function guardarObservacion(){
   saveLocal(DB_KEY, DB);
   addPending(reg);
   closeModal();
+  renderObsHoy();
   toast('Observación guardada ✓');
+}
+
+function renderObsHoy(){
+  const el = document.getElementById('obs-list-hoy');
+  if(!el) return;
+  const hoy = DB.asistencias.filter(a=>
+    a.tipo==='observacion' && a.fecha===todayStr() && a.docente===SESSION.nombre
+  );
+  if(!hoy.length){ el.innerHTML='<div class="empty-state" style="padding:20px">Sin observaciones registradas hoy</div>'; return; }
+  el.innerHTML = hoy.map(r=>`
+    <div class="obs-item ${r.esFelicitacion?'fel':''}">
+      <div class="obs-item-name">${r.nombre}</div>
+      <div class="obs-item-obs">${r.obs}</div>
+      <div class="obs-item-meta">📅 ${r.fecha} · ⏰ ${r.hora} · 👤 ${r.docente}</div>
+    </div>`).join('');
 }
 
 // ════════════════════════════════════════════════
@@ -1541,27 +1635,111 @@ function cargarInforme(){
   if(!data.length){ el.innerHTML='<div class="empty-state"><span class="icon">📋</span>Sin datos para este filtro</div>'; return; }
 
   const byCurso = {};
-  data.forEach(r=>{ const k=`${r.curso} "${r.paralelo||''}"`.trim(); if(!byCurso[k]) byCurso[k]=[]; byCurso[k].push(r); });
+  data.forEach(r=>{ const k=`${r.curso}|${r.paralelo||''}`; if(!byCurso[k]) byCurso[k]=[]; byCurso[k].push(r); });
 
   el.innerHTML = Object.entries(byCurso).map(([k,regs])=>{
+    const [curso,paralelo] = k.split('|');
+    const label = paralelo ? `${curso} "${paralelo}"` : curso;
     const p=regs.filter(r=>r.estado==='P').length;
     const pct=regs.length?Math.round(p/regs.length*100):0;
+
+    // Novedades del mismo curso y fecha
+    const novedades = DB.asistencias.filter(a=>
+      a.tipo==='observacion' && a.curso===curso && (a.paralelo||'')===(paralelo||'') &&
+      (!fecha || a.fecha===fecha)
+    );
+
+    const novHTML = novedades.length ? `
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:.75rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+          📝 Novedades (${novedades.length})
+        </div>
+        ${novedades.map(n=>`
+          <div class="obs-item ${n.esFelicitacion?'fel':''}" style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between">
+              <div class="obs-item-name" style="font-size:.82rem">${n.nombre}</div>
+              <span style="font-size:.68rem;color:${n.esFelicitacion?'var(--green)':'var(--amber)'}">${n.esFelicitacion?'⭐':'⚠'}</span>
+            </div>
+            <div class="obs-item-obs">${n.obs}</div>
+            <div class="obs-item-meta">👤 ${n.docente} · ${n.hora}</div>
+          </div>`).join('')}
+      </div>` : '';
+
     return `<div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin:0">${k}</div>
+        <div class="card-title" style="margin:0">${label}</div>
         <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:${pct>80?'var(--green)':pct>50?'var(--amber)':'var(--red)'}">${pct}%</div>
       </div>
       <table class="report-table">
-        <thead><tr><th>Apellidos, Nombres</th><th>RUDE</th><th>Estado</th><th>Hora</th></tr></thead>
+        <thead><tr><th>Apellidos, Nombres</th><th>RUDE</th><th>Estado</th><th>Hora</th><th>Docente</th></tr></thead>
         <tbody>${regs.map(r=>`<tr>
           <td>${r.nombre}</td>
           <td style="font-size:.72rem;color:var(--muted)">${r.rude}</td>
           <td><span class="li-badge ${r.estado==='P'?'badge-p':'badge-a'}">${r.estado==='P'?'PRES':'AUS'}</span></td>
-          <td style="color:var(--muted)">${r.hora}</td>
+          <td style="color:var(--muted);font-size:.75rem">${r.hora}</td>
+          <td style="color:var(--muted);font-size:.75rem">${r.docente||'—'}</td>
         </tr>`).join('')}</tbody>
       </table>
+      ${novHTML}
     </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════════════════
+//  NOVEDADES
+// ════════════════════════════════════════════════
+function cargarNovedades(){
+  const fecha   = document.getElementById('nov-fecha')?.value || '';
+  const curso   = document.getElementById('nov-curso')?.value || '';
+  const docente = document.getElementById('nov-docente')?.value || '';
+  const el      = document.getElementById('novedades-content');
+
+  // Populate docente selector
+  const docentes = [...new Set(DB.asistencias.filter(a=>a.tipo==='observacion').map(a=>a.docente).filter(Boolean))].sort();
+  const selDoc = document.getElementById('nov-docente');
+  if(selDoc && selDoc.options.length <= 1){
+    docentes.forEach(d=>{ if(![...selDoc.options].find(o=>o.value===d)) selDoc.appendChild(new Option(d,d)); });
+  }
+
+  // Populate curso selector
+  const selCurso = document.getElementById('nov-curso');
+  if(selCurso && selCurso.options.length <= 1){
+    const combos = [...new Set(DB.asistencias.filter(a=>a.tipo==='observacion').map(a=>`${a.curso}|${a.paralelo||''}`))].sort();
+    combos.forEach(c=>{
+      const [cur,par]=c.split('|');
+      const label=par?`${cur} "${par}"`:cur;
+      if(![...selCurso.options].find(o=>o.value===c)) selCurso.appendChild(new Option(label,c));
+    });
+  }
+
+  let data = DB.asistencias.filter(a=>a.tipo==='observacion');
+  if(fecha) data = data.filter(a=>a.fecha===fecha);
+  if(curso){
+    const [cur,par]=curso.split('|');
+    data = data.filter(a=>a.curso===cur && (a.paralelo||'')===(par||''));
+  }
+  if(docente) data = data.filter(a=>a.docente===docente);
+  data.sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.hora.localeCompare(a.hora));
+
+  if(!data.length){ el.innerHTML='<div class="empty-state"><span class="icon">📝</span>Sin novedades para este filtro</div>'; return; }
+
+  el.innerHTML = `
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">${data.length} novedad(es) encontrada(s)</div>
+    ${data.map(r=>`
+      <div class="obs-item ${r.esFelicitacion?'fel':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="obs-item-name">${r.nombre}</div>
+          <span class="li-badge ${r.esFelicitacion?'badge-p':'badge-l'}" style="flex-shrink:0;margin-left:8px">
+            ${r.esFelicitacion?'⭐ FELICIT.':'⚠ OBSERV.'}
+          </span>
+        </div>
+        <div class="obs-item-obs">${r.obs}</div>
+        <div class="obs-item-meta">
+          📅 ${r.fecha} · ⏰ ${r.hora} · 
+          👤 <strong style="color:var(--text)">${r.docente}</strong> · 
+          🏫 ${r.curso} "${r.paralelo||''}"
+        </div>
+      </div>`).join('')}`;
 }
 
 // ════════════════════════════════════════════════
