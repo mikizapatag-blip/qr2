@@ -680,6 +680,9 @@ async function doLogin(){
     }catch(e){ /* sin API, usar local */ }
   }
 
+  // Siempre leer DB fresco desde localStorage (por si se importaron usuarios)
+  DB = loadLocal(DB_KEY, DB);
+
   // Siempre intentar local como respaldo
   if(!found){
     found = DB.usuarios.find(x => x.usuario===u && x.pass===p);
@@ -1135,6 +1138,15 @@ function showImportPreviewAlumnos(rows, cR,cA,cN,cC,cP){
   const nuevos = rows.filter(r=>!DB.alumnos.find(a=>a.rude===r[cR]?.toString().trim()));
   const dupes  = rows.length - nuevos.length;
 
+  // Pre-build objects and store in global to avoid JSON-in-onclick issues
+  window._pendingAlumnos = nuevos.map(r=>({
+    rude:      r[cR]?.toString().trim(),
+    apellidos: r[cA]?.toString().trim(),
+    nombres:   r[cN]?.toString().trim(),
+    curso:     r[cC]?.toString().trim(),
+    paralelo:  (r[cP]||'A').toString().trim().toUpperCase()||'A'
+  }));
+
   el.innerHTML=`
     <div style="background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);border-radius:var(--rs);padding:14px;margin-bottom:10px">
       <div style="font-weight:600;margin-bottom:6px">Vista previa de importación</div>
@@ -1145,48 +1157,37 @@ function showImportPreviewAlumnos(rows, cR,cA,cN,cC,cP){
       </div>
     </div>
     <div style="max-height:180px;overflow-y:auto;margin-bottom:10px;border:1px solid var(--border);border-radius:var(--rs)">
-      ${nuevos.slice(0,8).map(r=>`
+      ${window._pendingAlumnos.slice(0,8).map(a=>`
         <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:.8rem">
-          <strong>${r[cA]}, ${r[cN]}</strong>
-          <span style="color:var(--muted);margin-left:8px">${r[cC]} ${r[cP]||''} · ${r[cR]}</span>
+          <strong>${a.apellidos}, ${a.nombres}</strong>
+          <span style="color:var(--muted);margin-left:8px">${a.curso} "${a.paralelo}" · ${a.rude}</span>
         </div>`).join('')}
       ${nuevos.length>8?`<div style="padding:8px 12px;font-size:.75rem;color:var(--muted)">…y ${nuevos.length-8} más</div>`:''}
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-green" style="flex:1" onclick="confirmarImportAlumnos(${JSON.stringify(nuevos).replace(/"/g,'&quot;')},
-        '${cR}','${cA}','${cN}','${cC}','${cP||''}')">
+      <button class="btn btn-green" style="flex:1" onclick="confirmarImportAlumnos()">
         ✅ Importar ${nuevos.length} alumnos
       </button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-preview').style.display='none'">Cancelar</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-preview').style.display='none';window._pendingAlumnos=null">Cancelar</button>
     </div>`;
 }
 
-function confirmarImportAlumnos(rows,cR,cA,cN,cC,cP){
+function confirmarImportAlumnos(){
+  const alumnos = window._pendingAlumnos;
+  if(!alumnos||!alumnos.length){ toast('Sin alumnos para importar','err'); return; }
   let count=0;
-  rows.forEach(r=>{
-    const al={
-      rude:r[cR]?.toString().trim(),
-      apellidos:r[cA]?.toString().trim(),
-      nombres:r[cN]?.toString().trim(),
-      curso:r[cC]?.toString().trim(),
-      paralelo:(r[cP]||'A').toString().trim().toUpperCase()||'A'
-    };
+  alumnos.forEach(al=>{
     if(!DB.alumnos.find(a=>a.rude===al.rude)){
       DB.alumnos.push(al); count++;
     }
   });
   saveLocal(DB_KEY,DB);
+  window._pendingAlumnos = null;
   populateCursos();
   renderAlumnosList();
   document.getElementById('import-preview').style.display='none';
   toast(`✅ ${count} alumnos importados`);
-  if(isOnline && API_URL){
-    rows.forEach(r=>{
-      apiCall('addAlumno',{rude:r[cR]?.toString().trim(),apellidos:r[cA]?.toString().trim(),
-        nombres:r[cN]?.toString().trim(),curso:r[cC]?.toString().trim(),
-        paralelo:(r[cP]||'A').toString().trim().toUpperCase()||'A'});
-    });
-  }
+  if(isOnline && API_URL) alumnos.forEach(al=>apiCall('addAlumno',al));
 }
 
 // ════════════════════════════════════════════════
@@ -1234,7 +1235,7 @@ function importXlsxUsuarios(file){
       const validos=rows.filter(r=>r[cU]?.toString().trim()&&r[cN]?.toString().trim()&&r[cR]?.toString().trim());
       const nuevos=validos.filter(r=>!DB.usuarios.find(u=>u.usuario===r[cU]?.toString().trim().toLowerCase()));
 
-      // Construir objetos finales con contraseña ya resuelta (evita problemas con nombre de columna en onclick)
+      // Construir objetos finales con contraseña ya resuelta
       const usuariosParaImportar = nuevos.map(r=>({
         usuario: r[cU]?.toString().trim().toLowerCase(),
         nombre:  r[cN]?.toString().trim(),
@@ -1242,11 +1243,14 @@ function importXlsxUsuarios(file){
         rol:     r[cR]?.toString().trim().toLowerCase()
       }));
 
+      // Guardar en variable global para evitar problemas con JSON en onclick
+      window._pendingUsuarios = usuariosParaImportar;
+
       const prev=document.getElementById('import-usuarios-preview');
       prev.style.display='block';
       prev.innerHTML=`
         <div style="background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);border-radius:var(--rs);padding:12px;margin-bottom:10px;font-size:.82rem">
-          ✅ Nuevos: <strong style="color:var(--green)">${nuevos.length}</strong> &nbsp;
+          ✅ Nuevos: <strong style="color:var(--green)">${usuariosParaImportar.length}</strong> &nbsp;
           ⚠ Ya existen: <strong style="color:var(--amber)">${validos.length-nuevos.length}</strong>
         </div>
         <div style="max-height:150px;overflow-y:auto;margin-bottom:10px;border:1px solid var(--border);border-radius:var(--rs)">
@@ -1255,12 +1259,13 @@ function importXlsxUsuarios(file){
               <strong>${u.nombre}</strong>
               <span style="color:var(--muted);margin-left:6px">@${u.usuario} · ${u.rol} · pass: ${u.pass}</span>
             </div>`).join('')}
+          ${usuariosParaImportar.length>6?`<div style="padding:7px 12px;font-size:.75rem;color:var(--muted)">…y ${usuariosParaImportar.length-6} más</div>`:''}
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-green" style="flex:1" onclick="confirmarImportUsuarios(${JSON.stringify(usuariosParaImportar).replace(/"/g,'&quot;')})">
+          <button class="btn btn-green" style="flex:1" onclick="confirmarImportUsuarios()">
             ✅ Importar ${usuariosParaImportar.length} usuarios
           </button>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-usuarios-preview').style.display='none'">Cancelar</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-usuarios-preview').style.display='none';window._pendingUsuarios=null">Cancelar</button>
         </div>`;
     }catch(err){ toast('Error: '+err.message,'err'); }
   };
@@ -1268,16 +1273,21 @@ function importXlsxUsuarios(file){
   document.getElementById('input-xlsx-usuarios').value='';
 }
 
-function confirmarImportUsuarios(usuarios){
+function confirmarImportUsuarios(){
+  const usuarios = window._pendingUsuarios;
+  if(!usuarios||!usuarios.length){ toast('Sin usuarios para importar','err'); return; }
   let count=0;
   usuarios.forEach(u=>{
-    if(!DB.usuarios.find(x=>x.usuario===u.usuario)){
+    if(u.usuario && !DB.usuarios.find(x=>x.usuario===u.usuario)){
       DB.usuarios.push(u); count++;
     }
   });
-  saveLocal(DB_KEY,DB);
+  saveLocal(DB_KEY, DB);
+  // Recargar DB desde localStorage para asegurar consistencia
+  DB = loadLocal(DB_KEY, DB);
+  window._pendingUsuarios = null;
   document.getElementById('import-usuarios-preview').style.display='none';
-  toast(`✅ ${count} usuarios importados`);
+  toast(`✅ ${count} usuarios importados — ya pueden iniciar sesión`);
 }
 
 // ════════════════════════════════════════════════
